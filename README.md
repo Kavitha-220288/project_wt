@@ -4,7 +4,7 @@ A personal finance tracker built with vanilla HTML/CSS/JS and Firebase. No frame
 
 ---
 
-## Stack
+## Tech Stack
 
 - **Frontend** — HTML, CSS, JavaScript
 - **Auth & Database** — Firebase (Email/Password + Google Sign-In, Realtime Database)
