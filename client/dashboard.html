@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walletly — Dashboard</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">💳</div>
+      <span class="brand-name">Walletly</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item active"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📄</span>Reports</a>
+      <a href="settings.html" class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-role">Member</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-sub" id="dateStr"></p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="notif-wrapper">
+          <button class="notif-btn" id="notifBtn" onclick="toggleNotifications()" title="Notifications">
+            🔔<span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">
+              <h4>Notifications</h4>
+              <button onclick="clearNotifications()">Clear All</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="notif-empty">No new notifications</div>
+            </div>
+          </div>
+        </div>
+        <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+        <button class="add-btn" onclick="openModal()">+ <span>Add Expense</span></button>
+      </div>
+    </header>
+
+    <!-- Alert banner inside main to avoid overlapping sidebar -->
+    <div class="alert-banner" id="alertBanner">
+      <div class="alert-content">
+        <span id="alertMsg"></span>
+      </div>
+      <button class="alert-close" onclick="document.getElementById('alertBanner').classList.remove('show')">✕</button>
+    </div>
+
+    <div class="page-body">
+      <!-- Stat cards -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(91,124,250,.12);color:var(--accent)">💰</div>
+          <div>
+            <div class="sc-label">Monthly Budget</div>
+            <div class="sc-value" id="sBudget">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(248,113,113,.12);color:var(--danger)">💸</div>
+          <div>
+            <div class="sc-label">Total Spent</div>
+            <div class="sc-value" id="sSpent">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(52,211,153,.12);color:var(--success)">🏦</div>
+          <div>
+            <div class="sc-label">Remaining</div>
+            <div class="sc-value" id="sRemaining">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-icon" style="background:rgba(240,180,41,.12);color:var(--gold)">📋</div>
+          <div>
+            <div class="sc-label">Transactions</div>
+            <div class="sc-value" id="sCount">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget progress and Insights -->
+      <div class="dashboard-top-row">
+        <div class="card budget-card">
+          <div class="section-header">
+            <h2>Budget Usage</h2>
+            <span class="badge badge-blue" id="pctBadge">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+          </div>
+          <div class="progress-labels"><span id="pSpent">₹0 spent</span><span id="pLeft">₹0 left</span></div>
+          <div class="cat-breakdown" id="catBreakdown"></div>
+        </div>
+
+        <div class="card insights-card" id="insightsCard">
+          <div class="section-header">
+            <h2>✨ Smart Insights</h2>
+          </div>
+          <div class="insights-body" id="insightsBody">
+            <div class="insight-placeholder">
+              <div class="pulse-line"></div>
+              <div class="pulse-line"></div>
+              <div class="pulse-line"></div>
+            </div>
+            <p class="insight-loading-text">Analyzing your spending habits...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom grid -->
+      <div class="bottom-grid">
+        <!-- Expense list -->
+        <div class="card">
+          <div class="section-header">
+            <h2>Recent Expenses</h2>
+            <select class="filter-select" id="filterCat" onchange="renderList()">
+              <option value="">All Categories</option>
+              <option value="Food">🍽️ Food & Dining</option>
+              <option value="Travel">🚗 Transit & Travel</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Bills">💡 Bills & Utilities</option>
+              <option value="Entertainment">🎬 Entertainment</option>
+              <option value="Health">⚕️ Health & Wellness</option>
+              <option value="Education">📚 Education</option>
+              <option value="Other">📦 Other</option>
+            </select>
+          </div>
+          <div class="expense-list" id="expenseList">
+            <div class="empty-state">
+              <div class="empty-icon">🧾</div>
+              <p>No expenses yet.<br>Add your first one!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini donut chart -->
+        <div class="card">
+          <div class="section-header">
+            <h2>By Category</h2>
+          </div>
+          <div class="mini-chart-wrap"><canvas id="donutChart"></canvas></div>
+          <div class="chart-legend" id="donutLegend"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Expense</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="tab-btn active" data-tab="manual">Manual Entry</button>
+        <button class="tab-btn" data-tab="voice">🎤 Voice</button>
+        <button class="tab-btn" data-tab="receipt-scan">📷 Receipt</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId" />
+
+        <!-- Manual Entry Tab -->
+        <div class="tab-content active" id="manual">
+          <div class="field"><label>Title *</label><input type="text" id="expTitle" placeholder="e.g. Lunch at Café" />
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Amount *</label><input type="number" id="expAmount" placeholder="0.00" min="0"
+                step="0.01" /></div>
+            <div class="field">
+              <label>Category *</label>
+              <select id="expCat">
+                <option value="" disabled selected>Choose a category</option>
+                <option value="Food">🍔 Food & Dining</option>
+                <option value="Travel">🚗 Transit & Travel</option>
+                <option value="Shopping">🛍️ Shopping</option>
+                <option value="Bills">💡 Bills & Utilities</option>
+                <option value="Entertainment">🎬 Entertainment</option>
+                <option value="Health">⚕️ Health & Wellness</option>
+                <option value="Education">📚 Education</option>
+                <option value="Other">📦 Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Date *</label><input type="date" id="expDate" /></div>
+            <div class="field"><label>Time</label><input type="time" id="expTime" /></div>
+          </div>
+          <div class="field"><label>Payment Method</label><input type="text" id="expPayment"
+              placeholder="e.g. Credit Card, Cash" /></div>
+          <div class="field"><label>Note</label><input type="text" id="expNote" placeholder="Optional note…" /></div>
+        </div>
+
+        <!-- Voice Input Tab -->
+        <div class="tab-content" id="voice">
+          <p>Speak your expense details. Example: "Bought coffee for 5 dollars from Starbucks on Monday."</p>
+          <button class="btn-primary" id="startVoiceInput">Start Voice Input</button>
+          <p id="voiceOutput" class="voice-output"></p>
+        </div>
+
+        <!-- Receipt Scanner Tab -->
+        <div class="tab-content" id="receipt-scan">
+          <p class="scan-hint">Upload a photo of your receipt — AI will auto-fill the form</p>
+          <div class="scan-drop-area" id="scanDropArea">
+            <div class="scan-drop-icon">📷</div>
+            <div class="scan-drop-text">Tap to choose an image</div>
+            <div class="scan-drop-sub">JPG, PNG or WEBP · Receipt or bill</div>
+          </div>
+          <input type="file" id="receiptUpload" accept="image/*" style="display:none" />
+          <div class="scan-preview" id="scanPreview" style="display:none">
+            <img id="scanPreviewImg" src="" alt="Receipt preview" />
+            <button class="scan-remove" id="scanRemove">✕ Remove</button>
+          </div>
+          <button class="btn-primary scan-btn" id="scanReceipt" style="display:none">⚡ Scan with AI</button>
+          <div id="receiptScanResult" class="scan-result"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveExpense()" id="saveExpBtn">Add Expense</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Chatbot Widget -->
+  <div class="chatbot-trigger" id="chatTrigger" onclick="toggleChat()">
+    <span class="chat-icon">💬</span>
+  </div>
+
+  <div class="chatbot-window" id="chatWindow">
+    <div class="chat-header">
+      <div>
+        <h4>AI Assistant</h4>
+        <span class="chat-status">Powered by Walletly</span>
+      </div>
+      <button class="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-msg ai-msg">
+        Hello! I'm your Walletly AI Assistant. How can I help you manage your finances today?
+      </div>
+    </div>
+    <div class="chat-footer">
+      <input type="text" id="chatInput" placeholder="Ask about your expenses..." onkeypress="handleChatKey(event)" />
+      <button class="chat-send" onclick="sendChatMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- Firebase Source -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script src="js/email.min.js"></script>
+
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/api_client.js"></script>
+  <script src="js/ai_service.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+
+</html>

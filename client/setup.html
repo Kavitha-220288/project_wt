@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walletly — Setup Your Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    :root {
+      --primary: #5f259f;
+      --secondary: #9b6ef3;
+      --bg-light: #f8f9ff;
+      --white: #ffffff;
+      --text-main: #1a1a2e;
+      --text-muted: #64748b;
+      --glass: rgba(255, 255, 255, 0.7);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light);
+      background-image: radial-gradient(circle at top right, rgba(155, 110, 243, 0.1) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .setup-card {
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 32px;
+      padding: 3.5rem;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 40px 100px rgba(95, 37, 159, 0.08);
+      text-align: center;
+    }
+    .step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 2rem; }
+    .step-dot { width: 30px; height: 6px; background: rgba(0,0,0,0.05); border-radius: 10px; }
+    .step-dot.active { background: var(--primary); }
+
+    h1 { font-family: 'Outfit', sans-serif; font-size: 2rem; margin-bottom: 1rem; }
+    p.desc { color: var(--text-muted); margin-bottom: 2.5rem; }
+
+    .input-group { margin-bottom: 1.8rem; text-align: left; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.6rem; }
+    input, select {
+      width: 100%;
+      padding: 1.1rem;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.6);
+      outline: none;
+      font-size: 1rem;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(95, 37, 159, 0.1); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 1.2rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(95, 37, 159, 0.2);
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      background: var(--secondary);
+      transform: translateY(-2px);
+    }
+    .footer-note { margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted); }
+
+    #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1a1a2e; color: white; padding: 12px 24px; border-radius: 10px; transition: all 0.4s; z-index: 1000; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body class="light">
+
+  <div class="setup-card">
+    <div class="step-indicator"><div class="step-dot active"></div><div class="step-dot active"></div><div class="step-dot active"></div></div>
+    
+    <h1>Configure Your Profile</h1>
+    <p class="desc">Personalize your Workspace for elite tracking.</p>
+
+    <div class="input-group">
+      <label><i class="fas fa-coins"></i> Local Currency Symbol</label>
+      <select id="currency">
+        <option value="₹">Indian Rupee (₹)</option>
+        <option value="$">US Dollar ($)</option>
+        <option value="€">Euro (€)</option>
+        <option value="£">Pound (£)</option>
+        <option value="¥">Yen (¥)</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-wallet"></i> Primary Monthly Budget</label>
+      <input type="number" id="budget" placeholder="e.g. 50000">
+    </div>
+
+    <div class="input-group">
+      <label><i class="fas fa-user-tag"></i> Professional Display Name</label>
+      <input type="text" id="displayName" placeholder="e.g. John Doe">
+    </div>
+
+    <button class="btn-primary" id="saveBtn">Launch Dashboard</button>
+    <p class="footer-note">You can update these preferences anytime.</p>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    window.initTheme();
+    
+    fbAuth.onAuthStateChanged(function(user) {
+      if(!user) window.location.href = 'signin.html';
+      if(user.displayName) document.getElementById('displayName').value = user.displayName;
+    });
+
+    document.getElementById('saveBtn').onclick = function() {
+      var budget = Number(document.getElementById('budget').value);
+      var symbol = document.getElementById('currency').value;
+      var name = document.getElementById('displayName').value.trim();
+      
+      if(!budget) { showToast('Please set a starting budget', 'error'); return; }
+      
+      var user = fbAuth.currentUser;
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Mapping Ecosystem...';
+
+      fbDB.ref('users/' + user.uid).set({
+        budget: budget,
+        symbol: symbol,
+        name: name || user.email,
+        email: user.email,
+        setupAt: Date.now()
+      }).then(function() {
+        if(name) user.updateProfile({ displayName: name });
+        window.location.href = 'dashboard.html';
+      }).catch(function(err) {
+        showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Launch Dashboard';
+      });
+    };
+  </script>
+</body>
+</html>

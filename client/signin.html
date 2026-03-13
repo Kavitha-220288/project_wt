@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walletly — Sign In</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    :root {
+      --primary: #5f259f;
+      --secondary: #9b6ef3;
+      --bg-light: #f8f9ff;
+      --white: #ffffff;
+      --text-main: #1a1a2e;
+      --text-muted: #64748b;
+      --glass: rgba(255, 255, 255, 0.7);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-light);
+      background-image: radial-gradient(circle at top right, rgba(155, 110, 243, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at bottom left, rgba(91, 124, 250, 0.05) 0%, transparent 40%);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      padding: 2rem;
+    }
+
+    .auth-card {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 24px;
+      padding: 3rem;
+      box-shadow: 0 20px 60px rgba(95, 37, 159, 0.08);
+      text-align: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      margin-bottom: 2.5rem;
+    }
+
+    .btn-google {
+      width: 100%;
+      padding: 1rem;
+      background: var(--white);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 2rem;
+    }
+
+    .btn-google:hover {
+      background: #fafafa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-google img {
+      width: 22px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-bottom: 2rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.5);
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(95, 37, 159, 0.2);
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+      background: var(--secondary);
+      transform: scale(1.02);
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #1a1a2e;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      transition: all 0.4s;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .back-link {
+      margin-top: 1.5rem;
+      display: block;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body class="light">
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="logo">
+        <div class="logo-icon">💳</div>
+        <span>Walletly</span>
+      </div>
+
+      <h2>Welcome Back</h2>
+      <p class="subtitle">Enter your details to manage your wealth.</p>
+
+      <button class="btn-google" id="googleLogin">
+        <i class="fab fa-google" style="color: #4285F4; font-size: 1.25rem;"></i>
+        Continue with Google
+      </button>
+
+      <div class="divider">or use email</div>
+
+      <div class="input-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="name@example.com">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••">
+      </div>
+
+      <button class="btn-primary" id="loginBtn">Sign In</button>
+
+      <a href="landing.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Universe</a>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    window.initTheme();
+
+    document.getElementById('googleLogin').onclick = function () {
+      var provider = new firebase.auth.GoogleAuthProvider();
+      fbAuth.signInWithPopup(provider).then(function (res) {
+        checkUser(res.user);
+      }).catch(function (err) {
+        showToast(err.message, 'error');
+      });
+    };
+
+    document.getElementById('loginBtn').onclick = function () {
+      var email = document.getElementById('email').value;
+      var pass = document.getElementById('password').value;
+      if (!email || !pass) { showToast('Enter all credentials', 'error'); return; }
+      fbAuth.signInWithEmailAndPassword(email, pass).then(function (res) {
+        checkUser(res.user);
+      }).catch(function (err) {
+        // Try sign up if user not found (simplification for demo)
+        if (err.code === 'auth/user-not-found') {
+          fbAuth.createUserWithEmailAndPassword(email, pass).then(function (res) {
+            checkUser(res.user);
+          }).catch(function (e) { showToast(e.message, 'error'); });
+        } else {
+          showToast(err.message, 'error');
+        }
+      });
+    };
+
+    function checkUser(user) {
+      fbDB.ref('users/' + user.uid).get().then(function (snap) {
+        if (snap.exists()) {
+          window.location.href = 'dashboard.html';
+        } else {
+          window.location.href = 'setup.html';
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>

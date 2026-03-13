@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walletly — Reports</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">💳</div>
+      <span class="brand-name">Walletly</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html" class="nav-item active"><span class="nav-icon">📄</span>Reports</a>
+      <a href="settings.html" class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-role">Member</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h1 class="page-title">Reports</h1>
+          <p class="page-sub">Export and download your data</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="card">
+        <div class="section-header">
+          <h2>Download Data</h2>
+        </div>
+        <div class="field" style="max-width: 400px; margin-top: 1rem;">
+          <p style="color: var(--muted); margin-bottom: 1rem;">Generate a CSV report of all your expenses to use in
+            Excel or Google Sheets.</p>
+          <button class="btn-primary" id="downloadCsv">Download CSV</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="section-header">
+          <h2>History</h2>
+        </div>
+        <div class="expense-list" id="reportPreview">
+          <p class="empty-state">No export history found.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase Source -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    let gExpenses = [];
+    window.requireAuth(function (user, data) {
+      fbDB.ref('users/' + user.uid + '/expenses').on('value', function (snap) {
+        gExpenses = [];
+        snap.forEach(c => { gExpenses.push(c.val()); });
+      });
+    });
+
+    document.getElementById('downloadCsv').onclick = function () {
+      if (!gExpenses.length) { alert('No expenses to export'); return; }
+
+      let csv = 'Title,Amount,Category,Date,Note\n';
+      gExpenses.forEach(e => {
+        csv += `"${e.title}",${e.amount},"${e.category}",${e.date},"${e.note || ''}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'walletly_report.csv');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.showToast('CSV Generated!', 'success');
+    };
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walletly — Analytics</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">💳</div>
+      <span class="brand-name">Walletly</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item active"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📄</span>Reports</a>
+      <a href="settings.html" class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-role">Member</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h1 class="page-title">Analytics</h1>
+          <p class="page-sub">Visual insights into your spending</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="stats-grid">
+        <div class="card">
+          <div class="section-header">
+            <h2>Spending Trends</h2>
+          </div>
+          <div style="height: 300px;"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="section-header">
+            <h2>Category Distribution</h2>
+          </div>
+          <div style="height: 300px;"><canvas id="categoryChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="section-header">
+          <h2>Monthly Comparison</h2>
+        </div>
+        <div style="height: 300px;"><canvas id="compareChart"></canvas></div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase Source -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    window.requireAuth(function (user, data) {
+      fbDB.ref('users/' + user.uid + '/expenses').on('value', function (snap) {
+        let expenses = [];
+        snap.forEach(c => { expenses.push(c.val()); });
+        renderCharts(expenses);
+      });
+    });
+
+    function renderCharts(expenses) {
+      const catTotals = {};
+      expenses.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + Number(e.amount); });
+
+      // Category Chart
+      new Chart(document.getElementById('categoryChart'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(catTotals),
+          datasets: [{
+            data: Object.values(catTotals),
+            backgroundColor: ['#5f259f', '#9b6ef3', '#7c3aed', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // Simplified Trend Chart (by date)
+      const dateTotals = {};
+      expenses.forEach(e => { dateTotals[e.date] = (dateTotals[e.date] || 0) + Number(e.amount); });
+      const sortedDates = Object.keys(dateTotals).sort();
+
+      new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+          labels: sortedDates,
+          datasets: [{
+            label: 'Daily Spending',
+            data: sortedDates.map(d => dateTotals[d]),
+            borderColor: '#5f259f',
+            tension: 0.3,
+            fill: true,
+            backgroundColor: 'rgba(95, 37, 159, 0.1)'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+  </script>
+</body>
+
+</html>

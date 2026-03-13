@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Walletly — Settings</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">💜</div>
+      <span class="brand-name">Walletly</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📄</span>Reports</a>
+      <a href="settings.html" class="nav-item active"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-role">Member</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h1 class="page-title">Settings</h1>
+          <p class="page-sub">Manage your account and preferences</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="card" style="max-width: 600px;">
+        <div class="section-header"><h2>Profile Settings</h2></div>
+        
+        <div class="field" style="margin-top: 1.5rem;">
+          <label>Display Name</label>
+          <input type="text" id="setDisplayName" placeholder="Your Name" />
+        </div>
+        
+        <div class="field">
+          <label>Monthly Budget</label>
+          <input type="number" id="setBudget" placeholder="0.00" />
+        </div>
+
+        <div class="field">
+          <label>Currency Symbol</label>
+          <select id="setCurrency">
+            <option value="₹">INR (₹)</option>
+            <option value="$">USD ($)</option>
+            <option value="€">EUR (€)</option>
+            <option value="£">GBP (£)</option>
+          </select>
+        </div>
+
+        <button class="btn-primary" id="saveSettings" style="margin-top: 1rem;">Save Changes</button>
+      </div>
+      
+      <div class="card" style="max-width: 600px; margin-top: 1.5rem; border-color: var(--danger);">
+        <div class="section-header"><h2 style="color: var(--danger);">Danger Zone</h2></div>
+        <p style="color: var(--muted); margin-bottom: 1.5rem;">Once you delete your account, there is no going back. Please be certain.</p>
+        <button class="btn-secondary" style="color: var(--danger); border-color: var(--danger);" onclick="alert('Account deletion requested.')">Delete Account</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Firebase Source -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  
+  <script src="/api/config.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    let gUser;
+    window.requireAuth(function(user, data) {
+      gUser = user;
+      document.getElementById('setDisplayName').value = data.name || user.displayName || '';
+      document.getElementById('setBudget').value = data.budget || '';
+      document.getElementById('setCurrency').value = data.symbol || '₹';
+    });
+
+    document.getElementById('saveSettings').onclick = function() {
+      const name = document.getElementById('setDisplayName').value;
+      const budget = Number(document.getElementById('setBudget').value);
+      const symbol = document.getElementById('setCurrency').value;
+      
+      fbDB.ref('users/' + gUser.uid).update({
+        name: name,
+        budget: budget,
+        symbol: symbol
+      }).then(() => {
+        window.showToast('Settings saved!', 'success');
+      }).catch(err => {
+        window.showToast('Error saving: ' + err.message, 'error');
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walletly — Smart Expense Tracking</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <span class="logo-icon">💳</span>
+                <span class="logo-text">Walletly</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#insights">Insights</a></li>
+                <li><a href="#how">How It Works</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+            </ul>
+            <div class="nav-auth">
+                <a href="signin.html" class="btn-text">Sign In</a>
+                <a href="signin.html" class="btn-primary">Create Account</a>
+            </div>
+            <button class="mobile-menu-btn"><i class="fas fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="reveal">Know Where Your <br><span class="text-gradient">Money Goes</span></h1>
+                <p class="hero-subtext reveal">Walletly helps you track expenses, understand spending habits, and build
+                    better financial discipline with clear insights.</p>
+                <div class="hero-actions reveal">
+                    <a href="signin.html" class="btn-primary btn-lg">Start Free</a>
+                    <a href="#demo" class="btn-outline btn-lg"><i class="fas fa-play"></i> See Demo</a>
+                </div>
+            </div>
+            <div class="hero-visual reveal">
+                <!-- Floating Glass Cards -->
+                <div class="glass-card card-pizza floating" style="--d: 0s">
+                    <div class="card-header"><span>🍕 Food</span><span>₹ 4,200</span></div>
+                    <div class="progress-bar">
+                        <div class="fill" style="width: 70%"></div>
+                    </div>
+                </div>
+                <div class="glass-card card-chart floating" style="--d: 0.5s">
+                    <canvas id="heroMiniChart"></canvas>
+                </div>
+                <div class="glass-card card-stat floating" style="--d: 1s">
+                    <div class="stat-label">Total Spent</div>
+                    <div class="stat-val">₹ 14,350</div>
+                </div>
+                <!-- Floating Icons -->
+                <div class="float-icon icon-1">💳</div>
+                <div class="float-icon icon-2">💰</div>
+                <div class="float-icon icon-3">🧾</div>
+                <div class="float-icon icon-4">📊</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Story 1: The Problem -->
+    <section class="story-section problem">
+        <div class="container center-text">
+            <div class="story-card glass reveal">
+                <h2 class="section-title">Small Expenses Add Up Quickly</h2>
+                <p class="section-desc">Daily purchases like coffee, subscriptions, and impulse shopping slowly drain
+                    your budget without you noticing.</p>
+                <div class="problem-icons">
+                    <div class="p-icon"><i class="fas fa-coffee"></i><span>Coffee</span></div>
+                    <div class="p-icon"><i class="fas fa-film"></i><span>Netflix</span></div>
+                    <div class="p-icon"><i class="fas fa-shopping-bag"></i><span>Amazon</span></div>
+                    <div class="p-icon"><i class="fas fa-hamburger"></i><span>Zomato</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Story 2: The Solution -->
+    <section class="story-section solution" id="demo">
+        <div class="container">
+            <div class="solution-grid">
+                <div class="solution-text">
+                    <h2 class="reveal">Meet <span class="text-gradient">Walletly</span></h2>
+                    <p class="reveal">Walletly automatically organizes your spending so you can clearly see where your
+                        money goes. Every rupee accounted for, in real-time.</p>
+                </div>
+                <div class="solution-visual reveal">
+                    <div class="mockup-window glass">
+                        <div class="mock-header">
+                            <div class="dots"><span></span><span></span><span></span></div>
+                            <span>walletly.app/dashboard</span>
+                        </div>
+                        <div class="mock-body">
+                            <div class="mock-sidebar"></div>
+                            <div class="mock-main">
+                                <div class="mock-stats">
+                                    <div class="m-box"></div>
+                                    <div class="m-box"></div>
+                                </div>
+                                <div class="mock-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header center-text">
+                <h2 class="reveal">Powerful Tools for Smarter Spending</h2>
+                <p class="reveal">Built for modern budgeters who value speed and intelligence.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-magic"></i></div>
+                    <h3>Smart Expense Tracking</h3>
+                    <p>Automatically record and categorize expenses with mercury-precise accuracy.</p>
+                </div>
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-bullseye"></i></div>
+                    <h3>Budget Planning</h3>
+                    <p>Set monthly spending limits and track progress against your goals in real-time.</p>
+                </div>
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-robot"></i></div>
+                    <h3>AI Insights</h3>
+                    <p>Understand spending patterns and receive personalized financial trends analysis.</p>
+                </div>
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-chart-pie"></i></div>
+                    <h3>Visual Reports</h3>
+                    <p>Interactive graphs and charts for deeper analysis of your financial health.</p>
+                </div>
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-sync"></i></div>
+                    <h3>Secure Cloud Sync</h3>
+                    <p>Access your financial data anywhere, anytime, with end-to-end encryption.</p>
+                </div>
+                <div class="feature-card glass reveal">
+                    <div class="f-icon"><i class="fas fa-bell"></i></div>
+                    <h3>Budget Alerts</h3>
+                    <p>Receive instant notifications when nearing your custom spending limits.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Insights Section -->
+    <section id="insights" class="insights">
+        <div class="container">
+            <div class="insights-container glass reveal">
+                <div class="insights-grid">
+                    <div class="insights-text">
+                        <h2>Turn Spending Data Into <br><span class="text-gradient">Clear Insights</span></h2>
+                        <p>Walletly transforms raw expense data into visual reports so you can easily understand your
+                            financial habits and make better decisions.</p>
+                        <ul class="check-list">
+                            <li><i class="fas fa-check-circle"></i> Weekly Trend Analysis</li>
+                            <li><i class="fas fa-check-circle"></i> Category-wise Breakdown</li>
+                            <li><i class="fas fa-check-circle"></i> AI Savings Potential Audit</li>
+                        </ul>
+                    </div>
+                    <div class="insights-viz">
+                        <canvas id="insightsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how" class="how-it-works">
+        <div class="container">
+            <h2 class="section-title center-text reveal">How It Works</h2>
+            <div class="steps-grid">
+                <div class="step-card reveal">
+                    <div class="step-num">01</div>
+                    <div class="step-icon"><i class="fas fa-plus-circle"></i></div>
+                    <h3>Add Your Expenses</h3>
+                    <p>Quickly log purchases in seconds via voice, receipt scan, or manual entry.</p>
+                </div>
+                <div class="step-card reveal">
+                    <div class="step-num">02</div>
+                    <div class="step-icon"><i class="fas fa-folder-open"></i></div>
+                    <h3>Automatic Categorization</h3>
+                    <p>Transactions are intelligently organized into smart categories using AI.</p>
+                </div>
+                <div class="step-card reveal">
+                    <div class="step-num">03</div>
+                    <div class="step-icon"><i class="fas fa-lightbulb"></i></div>
+                    <h3>Understand Your Spending</h3>
+                    <p>Visual dashboards reveal spending trends and provide actionable advice.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="container">
+            <h2 class="section-title center-text reveal">Loved by Smart Budgeters</h2>
+            <div class="testimonial-slider-wrap reveal">
+                <div class="testimonial-slider" id="testimonialSlider">
+                    <div class="t-card glass">
+                        <div class="t-text">"Walletly helped me finally stick to my monthly budget. The UI is just
+                            breath of fresh air."</div>
+                        <div class="t-user">
+                            <strong>Rohan</strong>
+                            <span>Developer</span>
+                        </div>
+                    </div>
+                    <div class="t-card glass">
+                        <div class="t-text">"The insights made me realize how much I spend on food delivery. I've saved
+                            ₹5k this month already!"</div>
+                        <div class="t-user">
+                            <strong>Sneha</strong>
+                            <span>Student</span>
+                        </div>
+                    </div>
+                    <div class="t-card glass">
+                        <div class="t-text">"Clean interface and powerful analytics. The best expense tracker I've used
+                            in years."</div>
+                        <div class="t-user">
+                            <strong>Arjun</strong>
+                            <span>Freelancer</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-box glass reveal">
+                <h2>Take Control of Your <br>Finances Today</h2>
+                <p>Join thousands of users improving their financial habits with Walletly.</p>
+                <div class="cta-btns">
+                    <a href="signin.html" class="btn-primary btn-lg">Create Free Account</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-grid">
+            <div class="footer-brand">
+                <div class="logo">
+                    <span class="logo-icon">💳</span>
+                    <span class="logo-text">Walletly</span>
+                </div>
+                <p>Smart financial management for the modern era.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-github"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h4>Product</h4>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#">Updates</a>
+            </div>
+            <div class="footer-links">
+                <h4>Company</h4>
+                <a href="#">About</a>
+                <a href="#">Careers</a>
+                <a href="#">Contact</a>
+            </div>
+            <div class="footer-links">
+                <h4>Legal</h4>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms</a>
+            </div>
+        </div>
+        <div class="footer-bottom center-text">
+            <p>&copy; 2026 Walletly. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="js/landing.js"></script>
+</body>
+
+</html>
