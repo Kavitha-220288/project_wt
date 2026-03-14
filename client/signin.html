@@ -278,6 +278,10 @@
     };
 
     function checkUser(user) {
+      // 🛡️ Set session markers immediately to bypass guards
+      localStorage.setItem('wt_logged_in', 'true');
+      document.cookie = "wt_logged_in=true; path=/; max-age=86400";
+
       fbDB.ref('users/' + user.uid).get().then(function (snap) {
         if (snap.exists()) {
           window.location.href = 'dashboard.html';

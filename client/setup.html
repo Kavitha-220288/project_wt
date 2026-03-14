@@ -80,7 +80,9 @@
 
     #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1a1a2e; color: white; padding: 12px 24px; border-radius: 10px; transition: all 0.4s; z-index: 1000; }
     #toast.show { transform: translateX(-50%) translateY(0); }
+    body { visibility: hidden; opacity: 0; transition: opacity 0.5s ease; }
   </style>
+  <script>if (!localStorage.getItem('wt_logged_in')) window.location.href = 'signin.html';</script>
 </head>
 <body class="light">
 
@@ -152,6 +154,9 @@
         setupAt: Date.now()
       }).then(function() {
         if(name) user.updateProfile({ displayName: name });
+        // 🔒 Ensure flags are set before redirecting
+        localStorage.setItem('wt_logged_in', 'true');
+        document.cookie = "wt_logged_in=true; path=/; max-age=86400";
         window.location.href = 'dashboard.html';
       }).catch(function(err) {
         showToast(err.message, 'error');

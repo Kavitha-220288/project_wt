@@ -13,6 +13,15 @@ var fbApp = firebase.initializeApp(window.FB_CONFIG || fbDefault);
 var fbAuth = firebase.auth();
 var fbDB   = firebase.database();
 
+// ── Global Session Sync ───────────────────────────────────
+// Ensures flags are restored if Firebase remembers the session
+fbAuth.onAuthStateChanged(function (user) {
+  if (user) {
+    localStorage.setItem('wt_logged_in', 'true');
+    document.cookie = "wt_logged_in=true; path=/; max-age=86400";
+  }
+});
+
 // ── Theme ─────────────────────────────────────────────────
 window.initTheme = function () {
   if (localStorage.getItem('wt_theme') === 'light') {
@@ -51,9 +60,17 @@ window.toggleSidebar = function () {
 window.requireAuth = function (callback) {
   fbAuth.onAuthStateChanged(function (user) {
     if (!user) {
+      localStorage.removeItem('wt_logged_in');
+      document.cookie = "wt_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
       window.location.href = 'signin.html';
       return;
     }
+    
+    // Set a flag for immediate head-script checking
+    localStorage.setItem('wt_logged_in', 'true');
+    // Set a cookie for server-side protection
+    document.cookie = "wt_logged_in=true; path=/; max-age=86400"; // 24h
+
     // Populate user UI elements if they exist
     var avatarEl = document.getElementById('userAvatar');
     var nameEl   = document.getElementById('userName');
@@ -65,10 +82,16 @@ window.requireAuth = function (callback) {
     if (logoutBtn) {
       logoutBtn.onclick = function () {
         fbAuth.signOut().then(function () {
+          localStorage.removeItem('wt_logged_in');
+          document.cookie = "wt_logged_in=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
           window.location.href = 'signin.html';
         });
       };
     }
+
+    // Show body now that we're authorized
+    document.body.style.visibility = 'visible';
+    document.body.style.opacity = '1';
 
     // Theme button in dashboard
     var themeBtn = document.getElementById('themeBtn');
@@ -81,5 +104,49 @@ window.requireAuth = function (callback) {
     }).catch(function () {
       callback(user, {});
     });
+  });
+};
+
+// ── Image Compression Utility ─────────────────────────────
+window.compressImage = function(file, maxWidth, maxHeight, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = event => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        // ⚡ GPU-Accelerated Fast Processing (Instant)
+        // Greyscale + slight contrast boost for OCR clarity
+        ctx.filter = 'grayscale(100%) contrast(120%) brightness(105%)';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Export as JPEG (0.65 is the sweet spot for file size vs text legibility)
+        const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.65);
+        resolve(dataUrl.split(',')[1]); 
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
   });
 };

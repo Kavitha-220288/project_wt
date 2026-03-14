@@ -63,9 +63,27 @@ Open your web browser and navigate to:
 ---
 
 ## 📂 Troubleshooting & Tips
-- **Missing `FB_API_KEY`?** If your Firebase keys aren't in the `.env`, the frontend will fall back to default placeholders (which may not be authorized for you).
-- **Budget Alerts not sending?** Ensure your `EMAILJS` credentials are correct in `.env`. You can create a free account at [emailjs.com](https://www.emailjs.com/).
-- **AI Chatbot Fails?** Make sure you have a valid `OPENROUTER_KEY` and your account has free/paid credits left.
-- **Port Conflict?** If another application is using port `3001`, open the `.env` file, change `PORT` to a different number (e.g., `8080`), and restart the server.
 
-*Happy tracking!*
+### ✉️ Setting up EmailJS (Budget Alerts)
+1. Go to [EmailJS.com](https://www.emailjs.com/) and create a free account.
+2. **Add Service**: Link your Gmail/Outlook and copy the **Service ID**.
+3. **Add Template**: Create a template for budget alerts and copy the **Template ID**.
+4. **Public Key**: Find your **Public Key** in your account settings.
+5. Paste these into your `.env` file as shown in section 3.
+
+### 🔄 The "First Page" Issue
+If you run `npm start` and see a login page instead of the landing page:
+- Make sure you don't have an `index.html` file in the root directory. 
+- Walletly uses `landing.html` as the default home page.
+- Our customized Express server handles the routing to ensure a professional flow.
+
+### 🤖 AI Chatbot Fails
+- Ensure you have a valid **OpenRouter API Key**.
+- If one model is slow, you can switch the `OPENROUTER_MODEL` in your `.env` to a different one (e.g., `google/gemini-2.0-flash-lite:free`).
+
+### 📸 Receipt Scanning
+- If receipt scanning is slow, configure the optional `GEMINI_API_KEY` in your `.env`. It utilizes Google's native vision models for lightning-fast parsing.
+
+---
+
+*Happy tracking! Your financial universe awaits.*

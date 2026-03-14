@@ -22,24 +22,37 @@ It uses a Node.js backend to securely proxy AI requests and serving static files
 ```
 walletly/
 ├── client/              ← Frontend application
-│   ├── index.html       ← Login / Sign up landing page
-│   ├── setup.html       ← Initial budget setup
-│   ├── dashboard.html   ← Main Expense tracker & AI
-│   ├── analytics.html   ← Charts & insights
+│   ├── landing.html     ← New! Animated SaaS Landing Page
+│   ├── signin.html      ← Updated! Glassmorphism Authentication
+│   ├── setup.html       ← Initial budget & profile setup
+│   ├── dashboard.html   ← Main Expense tracker & AI Assistant
+│   ├── analytics.html   ← Charts & trends
 │   ├── reports.html     ← CSV data exports
 │   ├── settings.html    ← Account configurations
-│   ├── css/app.css      ← Complete Design System (v2.0)
+│   ├── css/
+│   │   ├── landing.css  ← Landing page styles
+│   │   └── app.css      ← Main app Design System
 │   └── js/
+│       ├── landing.js   ← Landing page animations (GSAP)
 │       ├── api_client.js ← Frontend client for backend APIs
-│       ├── ai_service.js ← AI utilities (prompts, parsers)
-│       ├── common.js     ← Firebase init, auth, theme
-│       └── dashboard.js  ← Dashboard logic & DOM manipulation
+│       ├── ai_service.js ← AI logic & prompt engineering
+│       ├── common.js     ← Auth guard & global utilities
+│       └── dashboard.js  ← Tracker UI & event handling
 ├── server/
-│   ├── index.js         ← Server entry point
-│   └── server.js        ← Express app & API routes
-├── .env                 ← Environment variables (API Keys)
-└── package.json         ← Node dependencies
+│   ├── index.js         ← Application entry point
+│   └── server.js        ← Express routes & AI proxying
+├── .env                 ← Secure API Keys (Git ignored)
+└── package.json         ← Scripts & dependencies
 ```
+
+---
+
+## 🚦 Application Flow
+
+1. **Discovery**: User arrives at the high-end `landing.html`.
+2. **Authentication**: User logs in or signs up via `signin.html` (Google/Email).
+3. **Personalization**: New users are guided to `setup.html` to set their currency and budget.
+4. **Operations**: User manages their finances on the `dashboard.html`.
 
 ---
 

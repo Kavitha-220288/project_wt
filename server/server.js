@@ -13,6 +13,26 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' }));
 
+// ── Security Headers for Auth ──────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
+// ── Auth Guard for Protected Pages ─────────────────────────
+const protectedPages = ['/dashboard.html', '/analytics.html', '/reports.html', '/settings.html', '/setup.html'];
+app.use((req, res, next) => {
+  // Check if requesting a protected HTML page
+  if (protectedPages.includes(req.path)) {
+    const cookies = req.headers.cookie || '';
+    if (!cookies.includes('wt_logged_in=true')) {
+      console.log(`[auth] Unauthorized access to ${req.path}, redirecting to signin.`);
+      return res.redirect('/signin.html');
+    }
+  }
+  next();
+});
+
 // Serve static files from 'client' directory
 app.use(express.static(path.join(__dirname, '../client')));
 
@@ -43,13 +63,21 @@ if (missingEnv.length > 0) {
 }
 
 // AI Proxy Routes
+app.use('/api/ai', (req, res, next) => {
+  const cookies = req.headers.cookie || '';
+  if (!cookies.includes('wt_logged_in=true')) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'Auth session required' });
+  }
+  next();
+});
+
 app.post('/api/ai/chat', async (req, res, next) => {
   const { messages, model } = req.body;
-  
+
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ 
-      error: 'Invalid Request', 
-      message: 'The "messages" field must be a non-empty array.' 
+    return res.status(400).json({
+      error: 'Invalid Request',
+      message: 'The "messages" field must be a non-empty array.'
     });
   }
 
@@ -65,7 +93,7 @@ app.post('/api/ai/chat', async (req, res, next) => {
       },
       timeout: 30000 // 30s timeout
     });
-    
+
     if (!response.data?.choices?.[0]) {
       throw new Error('AI provider returned an empty or malformed choice list');
     }
@@ -104,19 +132,12 @@ Rules:
 4. Clean titles (e.g., "SWIGGY*RESTAURANT" -> "Restaurant").`;
   }
 
-  async parse(txt, fileBase64, fileType, modelOverride) {
+  async parse(txt, fileBase64, fileType) {
     if (!this.apiKey) {
       throw new Error('OPENROUTER_KEY is not configured on the server.');
     }
 
-    let model = modelOverride;
-    if (!model) {
-      // Use specialized parse model for images, otherwise fallback to default
-      model = fileBase64 ? (process.env.OPENROUTER_MODEL_PARSE || this.defaultModel) : this.defaultModel;
-    }
-
-    let messages = [{ role: 'system', content: this.getSystemPrompt() }];
-
+    const messages = [{ role: 'system', content: this.getSystemPrompt() }];
     if (fileBase64) {
       messages.push({
         role: 'user',
@@ -129,31 +150,53 @@ Rules:
       messages.push({ role: 'user', content: `Extract from this text: "${txt}"` });
     }
 
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: model,
-      messages: messages
-    }, {
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'HTTP-Referer': `http://localhost:${PORT}`,
-        'X-Title': 'Walletly'
-      },
-      timeout: 45000 // Parsing images/voice might take longer
-    });
+    // 🏎️ THE PARALLEL RACE (Verified March 2026 Free IDs)
+    const models = [
+      'google/gemma-3-27b-it:free',        // Newest Speed King
+      'meta-llama/llama-4-scout:free',     // Advanced Reasoning
+      'nvidia/nemotron-nano-12b-v2-vl:free' // Confirmed Working
+    ];
 
-    const content = response.data?.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('AI provider failed to return message content.');
-    }
+    console.log(`[ai-race] Starting staggered race between: ${models.join(', ')}`);
+
+    const performRequest = async (model, index) => {
+      // ⏱️ Stagger the start by 200ms per racer to avoid rate-limit "burst" triggers
+      await new Promise(r => setTimeout(r, index * 200));
+
+      try {
+        const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: model,
+          messages: messages
+        }, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'HTTP-Referer': `http://localhost:${PORT}`,
+            'X-Title': 'Walletly'
+          },
+          timeout: 40000
+        });
+
+        const raw = res.data?.choices?.[0]?.message?.content;
+        if (!raw) throw new Error(`Empty response from ${model}`);
+
+        const match = raw.match(/\{[\s\S]*\}/);
+        const jsonStr = match ? match[0] : raw;
+        const parsed = JSON.parse(jsonStr);
+
+        console.log(`[ai-race] 🏆 Winner: ${model}`);
+        return parsed;
+      } catch (e) {
+        const errMsg = e.response?.data?.error?.message || e.message;
+        console.warn(`[ai-race] ❌ ${model} failed: ${errMsg}`);
+        throw e;
+      }
+    };
 
     try {
-      // Find JSON block if AI adds extra text (robust to markdown fences)
-      const match = content.match(/\{[\s\S]*\}/);
-      const jsonStr = match ? match[0] : content;
-      return JSON.parse(jsonStr);
-    } catch (e) {
-      console.error('JSON Parse Error from AI response:', content);
-      throw new Error('AI returned an invalid data format. Please try manual entry.');
+      return await Promise.any(models.map((m, i) => performRequest(m, i)));
+    } catch (aggregateError) {
+      console.error('[ai-race] FATAL: All racers failed.');
+      throw new Error('All AI engines are currently congested or rate-limited. Please try again in 10 seconds.');
     }
   }
 }
@@ -162,7 +205,7 @@ const expenseParser = new ExpenseParser(process.env.OPENROUTER_KEY, process.env.
 
 app.post('/api/ai/parse', async (req, res, next) => {
   const { txt, fileBase64, fileType, model } = req.body;
-  
+
   if (!txt && !fileBase64) {
     return res.status(400).json({ error: 'Missing Input', message: 'Text or File required for parsing' });
   }
@@ -170,10 +213,10 @@ app.post('/api/ai/parse', async (req, res, next) => {
   try {
     const parsedData = await expenseParser.parse(txt, fileBase64, fileType, model);
     // Standardizing response format for frontend
-    res.json({ 
+    res.json({
       success: true,
       data: parsedData,
-      choices: [{ message: { content: JSON.stringify(parsedData) } }] 
+      choices: [{ message: { content: JSON.stringify(parsedData) } }]
     });
   } catch (error) {
     next(error);
@@ -192,16 +235,16 @@ app.get('*', (req, res) => {
 app.use((err, req, res, next) => {
   const status = err.response?.status || 500;
   let message = 'Internal Server Error';
-  
+
   // Extract clean message from OpenRouter error or Axios error
   if (err.response?.data?.error?.message) {
     message = err.response.data.error.message;
   } else if (err.message) {
     message = err.message;
   }
-  
+
   console.error(`[backend error] ${req.method} ${req.url} (${status}):`, message);
-  
+
   res.status(status).json({
     error: 'Backend Service Error',
     message: message,

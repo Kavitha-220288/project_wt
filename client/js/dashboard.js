@@ -416,32 +416,42 @@ function startVoice() {
   rec.start();
 }
 
-function scanReceipt(file) {
+async function scanReceipt(file) {
   var btn = document.getElementById('scanReceipt'); btn.disabled = true;
   var resMsg = document.getElementById('receiptScanResult');
-  resMsg.style.display = 'block'; resMsg.textContent = 'Scanning with AI...'; resMsg.className = 'scan-result';
+  resMsg.style.display = 'block'; resMsg.textContent = 'Optimizing & Scanning...'; resMsg.className = 'scan-result';
   
-  var reader = new FileReader();
-  reader.onload = async () => {
-    var base64 = reader.result.split(',')[1];
-    try {
-      const p = await parseExpenseWithAI(null, base64, file.type);
-      if (p && p.amount) {
-        fillForm(p);
-        switchModalTab('manual');
-        resMsg.style.display = 'none';
-        showToast('Receipt scanned successfully!', 'success');
-      } else {
-        resMsg.textContent = '❌ Could not extract data. Please enter manually.';
-      }
-    } catch (err) {
-      console.error('Scan Error:', err);
-      resMsg.textContent = '❌ AI Scan failed. Try manual entry.';
-      resMsg.className = 'scan-result parsed-err';
+  const startTime = performance.now();
+  console.log('[Walletly AI] Starting extreme optimization...');
+
+  try {
+    // 🚀 Extreme Optimization (1000px / 0.5 quality)
+    // Minimizes upload payload to ~50KB for instant transfer
+    const base64 = await window.compressImage(file, 1000, 1000, 0.5);
+    const optTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.log(`[Walletly AI] Optimization complete. Time: ${optTime}s. Sending to server...`);
+    
+    const apiStart = performance.now();
+    const p = await parseExpenseWithAI(null, base64, 'image/jpeg');
+    const apiTime = ((performance.now() - apiStart) / 1000).toFixed(2);
+    const totalTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    
+    console.log(`[Walletly AI] Server Response in ${apiTime}s. Total cycle: ${totalTime}s.`);
+
+    if (p && p.amount) {
+      fillForm(p);
+      switchModalTab('manual');
+      resMsg.style.display = 'none';
+      showToast(`Scanned in ${totalTime}s ✓`, 'success');
+    } else {
+      resMsg.textContent = '❌ Could not extract data. Please enter manually.';
     }
-    btn.disabled = false;
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    console.error('Scan Error:', err);
+    resMsg.textContent = '❌ AI Scan failed. Try manual entry.';
+    resMsg.className = 'scan-result parsed-err';
+  }
+  btn.disabled = false;
 }
 
 // Redundant getAIInsight removed, now using ai_service.js function
