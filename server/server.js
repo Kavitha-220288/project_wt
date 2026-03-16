@@ -55,11 +55,16 @@ app.get('/api/config.js', (req, res) => {
 });
 
 // Environment Variable Validation
-const REQUIRED_ENV = ['OPENROUTER_KEY', 'OPENROUTER_MODEL', 'FB_API_KEY', 'OPENROUTER_MODEL_PARSE'];
-const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
-if (missingEnv.length > 0) {
-  console.warn(`⚠️ Warning: Missing environment variables: ${missingEnv.join(', ')}`);
-  console.warn('AI and Firebase features may not function correctly.');
+const REQUIRED_ENV = ['FB_API_KEY', 'OPENROUTER_KEY']; 
+const OPTIONAL_ENV = ['GROQ_API_KEY', 'GROQ_MODEL_SCAN', 'GROQ_MODEL_VISION'];
+
+const missingRequired = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missingRequired.length > 0) {
+  console.warn(`⚠️ Warning: Missing REQUIRED environment variables: ${missingRequired.join(', ')}`);
+}
+
+if (!process.env.GROQ_API_KEY) {
+  console.info('ℹ️  Tip: Add GROQ_API_KEY to .env for 10x faster AI response times.');
 }
 
 // AI Proxy Routes
@@ -81,17 +86,22 @@ app.post('/api/ai/chat', async (req, res, next) => {
     });
   }
 
+  const useGroq = !!process.env.GROQ_API_KEY && (!model || model.includes('groq') || model.includes('llama-3.3'));
+  const apiKey = useGroq ? process.env.GROQ_API_KEY : process.env.OPENROUTER_KEY;
+  const url = useGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+  const defaultModel = useGroq ? (process.env.GROQ_MODEL_SCAN || 'llama-3.3-70b-versatile') : (process.env.OPENROUTER_MODEL || 'arcee-ai/trinity-large-preview:free');
+
   try {
-    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-      model: model || process.env.OPENROUTER_MODEL,
+    const response = await axios.post(url, {
+      model: model || defaultModel,
       messages: messages
     }, {
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': `http://localhost:${PORT}`,
         'X-Title': 'Walletly'
       },
-      timeout: 30000 // 30s timeout
+      timeout: useGroq ? 20000 : 30000 
     });
 
     if (!response.data?.choices?.[0]) {
@@ -100,6 +110,26 @@ app.post('/api/ai/chat', async (req, res, next) => {
 
     res.json(response.data);
   } catch (error) {
+    // If Groq fails, try to fallback to OpenRouter if we haven't already
+    if (useGroq && process.env.OPENROUTER_KEY) {
+      console.warn('[chat] Groq failed, falling back to OpenRouter...');
+      try {
+        const fallbackRes = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+          model: process.env.OPENROUTER_MODEL || 'arcee-ai/trinity-large-preview:free',
+          messages: messages
+        }, {
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENROUTER_KEY}`,
+            'HTTP-Referer': `http://localhost:${PORT}`,
+            'X-Title': 'Walletly'
+          },
+          timeout: 30000
+        });
+        return res.json(fallbackRes.data);
+      } catch (fbError) {
+        return next(fbError);
+      }
+    }
     next(error);
   }
 });
@@ -133,8 +163,8 @@ Rules:
   }
 
   async parse(txt, fileBase64, fileType) {
-    if (!this.apiKey) {
-      throw new Error('OPENROUTER_KEY is not configured on the server.');
+    if (!this.apiKey && !process.env.GROQ_API_KEY) {
+      throw new Error('No AI API keys (OpenRouter or Groq) configured on the server.');
     }
 
     const messages = [{ role: 'system', content: this.getSystemPrompt() }];
@@ -150,53 +180,76 @@ Rules:
       messages.push({ role: 'user', content: `Extract from this text: "${txt}"` });
     }
 
-    // 🏎️ THE PARALLEL RACE (Verified March 2026 Free IDs)
-    const models = [
-      'google/gemma-3-27b-it:free',        // Newest Speed King
-      'meta-llama/llama-4-scout:free',     // Advanced Reasoning
-      'nvidia/nemotron-nano-12b-v2-vl:free' // Confirmed Working
+    // 🏎️ THE PARALLEL RACE - Groq vs OpenRouter
+    const racers = [];
+
+    // 1. Groq Racer (Primary - Extremely Fast)
+    if (process.env.GROQ_API_KEY) {
+      const groqModel = fileBase64 ? (process.env.GROQ_MODEL_VISION || 'llama-3.2-11b-vision-preview') : (process.env.GROQ_MODEL_SCAN || 'llama-3.3-70b-versatile');
+      racers.push(this.performAIRequest('groq', groqModel, process.env.GROQ_API_KEY, messages, 0));
+    }
+
+    // 2. OpenRouter Racers (Fallback - Free tier)
+    const orModels = [
+      'google/gemma-3-27b-it:free',
+      'meta-llama/llama-4-scout:free',
+      'nvidia/nemotron-nano-12b-v2-vl:free'
     ];
+    orModels.forEach((m, i) => {
+      racers.push(this.performAIRequest('openrouter', m, this.apiKey, messages, i + 1));
+    });
 
-    console.log(`[ai-race] Starting staggered race between: ${models.join(', ')}`);
-
-    const performRequest = async (model, index) => {
-      // ⏱️ Stagger the start by 200ms per racer to avoid rate-limit "burst" triggers
-      await new Promise(r => setTimeout(r, index * 200));
-
-      try {
-        const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-          model: model,
-          messages: messages
-        }, {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'HTTP-Referer': `http://localhost:${PORT}`,
-            'X-Title': 'Walletly'
-          },
-          timeout: 40000
-        });
-
-        const raw = res.data?.choices?.[0]?.message?.content;
-        if (!raw) throw new Error(`Empty response from ${model}`);
-
-        const match = raw.match(/\{[\s\S]*\}/);
-        const jsonStr = match ? match[0] : raw;
-        const parsed = JSON.parse(jsonStr);
-
-        console.log(`[ai-race] 🏆 Winner: ${model}`);
-        return parsed;
-      } catch (e) {
-        const errMsg = e.response?.data?.error?.message || e.message;
-        console.warn(`[ai-race] ❌ ${model} failed: ${errMsg}`);
-        throw e;
-      }
-    };
+    console.log(`[ai-race] Starting race with ${racers.length} racers...`);
 
     try {
-      return await Promise.any(models.map((m, i) => performRequest(m, i)));
+      return await Promise.any(racers);
     } catch (aggregateError) {
       console.error('[ai-race] FATAL: All racers failed.');
       throw new Error('All AI engines are currently congested or rate-limited. Please try again in 10 seconds.');
+    }
+  }
+
+  async performAIRequest(provider, model, key, messages, index) {
+    if (!key) throw new Error(`Missing key for ${provider}`);
+    
+    // Stagger OpenRouter by 200ms increments, Groq starts immediately (index 0)
+    if (index > 0) await new Promise(r => setTimeout(r, index * 200));
+
+    const startTime = Date.now();
+    const url = provider === 'groq' 
+      ? 'https://api.groq.com/openai/v1/chat/completions' 
+      : 'https://openrouter.ai/api/v1/chat/completions';
+
+    try {
+      const res = await axios.post(url, {
+        model: model,
+        messages: messages,
+        temperature: 0.1
+      }, {
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'HTTP-Referer': `http://localhost:${PORT}`,
+          'X-Title': 'Walletly'
+        },
+        timeout: provider === 'groq' ? 15000 : 40000 // Groq is fast, OpenRouter gets more time
+      });
+
+      const raw = res.data?.choices?.[0]?.message?.content;
+      if (!raw) throw new Error(`Empty response from ${provider}/${model}`);
+
+      // Robust JSON extraction
+      const match = raw.match(/\{[\s\S]*\}/);
+      const jsonStr = match ? match[0] : raw;
+      const parsed = JSON.parse(jsonStr);
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`[ai-race] 🏆 Winner: ${provider}/${model} in ${duration}s`);
+      return parsed;
+    } catch (e) {
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      const errMsg = e.response?.data?.error?.message || e.message;
+      console.warn(`[ai-race] ❌ ${provider}/${model} failed after ${duration}s: ${errMsg}`);
+      throw e;
     }
   }
 }
@@ -204,19 +257,17 @@ Rules:
 const expenseParser = new ExpenseParser(process.env.OPENROUTER_KEY, process.env.OPENROUTER_MODEL);
 
 app.post('/api/ai/parse', async (req, res, next) => {
-  const { txt, fileBase64, fileType, model } = req.body;
+  const { txt, fileBase64, fileType } = req.body;
 
   if (!txt && !fileBase64) {
     return res.status(400).json({ error: 'Missing Input', message: 'Text or File required for parsing' });
   }
 
   try {
-    const parsedData = await expenseParser.parse(txt, fileBase64, fileType, model);
-    // Standardizing response format for frontend
+    const parsedData = await expenseParser.parse(txt, fileBase64, fileType);
     res.json({
       success: true,
-      data: parsedData,
-      choices: [{ message: { content: JSON.stringify(parsedData) } }]
+      data: parsedData
     });
   } catch (error) {
     next(error);
