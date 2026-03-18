@@ -1,27 +1,3 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/style.css">
-    <title>Document</title>
-</head>
-<body>
-    <h2>Login / Signup</h2>
-
-    <input type="email" id="email" placeholder="Email" required>
-    <input type="password" id="password" placeholder="Password" required>
-
-    <button id="signupBtn" onclick="signup()">Signup</button>
-    <button id="loginBtn" onclick="login()">Login</button>
-    <button id="googleLogin">Login with Google</button>
-
-    <script type="module" src="./js/app.js"></script>
-</body>
-<script src="js/theme-toggle.js"></script>
-</html> -->
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -144,7 +120,7 @@
 </head>
 <body>
 
-  <!-- Left Panel -->
+  
   <div class="left-panel">
     <div class="brand">
       <div class="brand-icon">💳</div>
@@ -167,7 +143,7 @@
     </div>
   </div>
 
-  <!-- Right Panel -->
+  
   <div class="right-panel">
     <div class="form-title">Welcome back</div>
     <div class="form-sub">Sign in to your account or create a new one</div>
@@ -177,7 +153,7 @@
       <button class="tab-btn"        id="signupTab">Sign Up</button>
     </div>
 
-    <!-- Login -->
+    
     <div id="loginForm">
       <div class="field">
         <label>Email Address</label>
@@ -191,7 +167,7 @@
       <button class="btn-primary" id="loginBtn">Sign In</button>
     </div>
 
-    <!-- Signup -->
+    
     <div id="signupForm" style="display:none">
       <div class="field">
         <label>Email Address</label>
@@ -220,13 +196,12 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- ✅ Firebase compat SDK v9 — loaded at bottom BEFORE app script -->
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // ── Init ──
     const app  = firebase.initializeApp({
       apiKey:            "AIzaSyDBpprnuEhHMF8_pFKTdQI1J9lOMJwTa74",
       authDomain:        "expense-tracker-c3176.firebaseapp.com",
@@ -239,7 +214,6 @@
     const auth = firebase.auth();
     const db   = firebase.database();
 
-    // ── Helpers ──
     function toast(msg, type) {
       const el = document.getElementById('toast');
       el.textContent = msg;
@@ -277,7 +251,7 @@
       return map[code] !== undefined ? map[code] : code;
     }
 
-    // ── Redirect after login ──
+    
     var redirecting = false;
     function goNext(user) {
       redirecting = true;
@@ -289,12 +263,12 @@
       });
     }
 
-    // ── Auto-redirect if already signed in ──
+   
     auth.onAuthStateChanged(function(user) {
       if (user && !redirecting) goNext(user);
     });
 
-    // ── Tab switching ──
+    
     document.getElementById('loginTab').onclick = function() {
       document.getElementById('loginForm').style.display  = 'block';
       document.getElementById('signupForm').style.display = 'none';
@@ -310,7 +284,7 @@
       clearErr('signupError');
     };
 
-    // ── Sign In ──
+    
     function doLogin() {
       clearErr('loginError');
       var email = document.getElementById('loginEmail').value.trim();
@@ -331,7 +305,7 @@
     document.getElementById('loginPassword').onkeydown = function(e) { if (e.key === 'Enter') doLogin(); };
     document.getElementById('loginEmail').onkeydown    = function(e) { if (e.key === 'Enter') doLogin(); };
 
-    // ── Sign Up ──
+    
     function doSignup() {
       clearErr('signupError');
       var email = document.getElementById('signupEmail').value.trim();
@@ -359,7 +333,7 @@
     document.getElementById('signupPassword').onkeydown = function(e) { if (e.key === 'Enter') doSignup(); };
 
     document.getElementById('signupEmail').onkeydown = function(e) { if (e.key === 'Enter') doSignup(); };
-    // ── Google Sign-In ──
+    
     document.getElementById('googleBtn').onclick = function() {
       var btn = document.getElementById('googleBtn');
       btn.disabled = true;
