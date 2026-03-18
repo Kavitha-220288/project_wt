@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Walletly — Setup</title>
+  <title>Setup — FinBuddy</title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#080b12;--card:#0f1320;--card2:#161b2e;--border:#1e2540;--accent:#5b7cfa;--accent2:#7c5bf5;--success:#34d399;--danger:#f87171;--text:#e8edf8;--muted:#6b7494;--dim:#353c5a}
+    :root{--bg:#131722;--card:#1c2333;--card2:#252e42;--border:#2d3a54;--accent:#6366f1;--accent2:#818cf8;--success:#34d399;--danger:#f87171;--text:#f8fafc;--muted:#94a3b8;--dim:#475569}
     body.light{--bg:#f0f2fb;--card:#fff;--card2:#f4f5fc;--border:#dde1f2;--accent:#4060f0;--accent2:#6535ee;--text:#18203a;--muted:#556080;--dim:#aab2ce}
     body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;transition:background .25s,color .25s;background-image:radial-gradient(ellipse 70% 60% at 15% 20%,rgba(91,124,250,.1) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 85% 80%,rgba(124,91,245,.07) 0%,transparent 60%)}
     .wrap{width:100%;max-width:500px}
@@ -57,8 +57,8 @@
   <div class="wrap">
     <div class="toprow">
       <div class="brand">
-        <div class="brand-icon">💳</div>
-        <span class="brand-name">Walletly</span>
+        <div class="brand-icon">📈</div>
+        <span class="brand-name">FinBuddy</span>
       </div>
       <button class="theme-btn" id="themeBtn">☀️</button>
     </div>
@@ -71,24 +71,46 @@
         <div class="step-line"></div>
         <div class="step idle">3</div>
       </div>
-      <h2>Set up your wallet</h2>
-      <p class="sub">Choose your currency and set a monthly budget</p>
+      <h2>Welcome to FinBuddy</h2>
+      <p class="sub">How would you like to track your expenses?</p>
 
       <div class="field">
-        <label>Currency</label>
-        <div class="cur-grid" id="curGrid">
-          <div class="cur-btn sel" data-code="INR" data-sym="₹"><span class="cur-sym">₹</span>INR</div>
-          <div class="cur-btn" data-code="USD" data-sym="$"><span class="cur-sym">$</span>USD</div>
-          <div class="cur-btn" data-code="EUR" data-sym="€"><span class="cur-sym">€</span>EUR</div>
-          <div class="cur-btn" data-code="GBP" data-sym="£"><span class="cur-sym">£</span>GBP</div>
-          <div class="cur-btn" data-code="JPY" data-sym="¥"><span class="cur-sym">¥</span>JPY</div>
-          <div class="cur-btn" data-code="CAD" data-sym="C$"><span class="cur-sym">C$</span>CAD</div>
+        <label>Choose Setup Mode</label>
+        <div class="cur-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="cur-btn sel" id="modePersonal">👤 Personal Wallet</div>
+          <div class="cur-btn" id="modeGroup">👨‍👩‍👧‍👦 Family Group</div>
         </div>
       </div>
 
-      <div class="field" style="margin-top:.8rem">
-        <label>Monthly Budget</label>
-        <input type="number" id="budgetInput" placeholder="e.g. 25000" min="1"/>
+      <!-- Personal Info Section -->
+      <div id="personalSection">
+        <div class="field">
+          <label>Currency</label>
+          <div class="cur-grid" id="curGrid">
+            <div class="cur-btn sel" data-code="INR" data-sym="₹"><span class="cur-sym">₹</span>INR</div>
+            <div class="cur-btn" data-code="USD" data-sym="$"><span class="cur-sym">$</span>USD</div>
+            <div class="cur-btn" data-code="EUR" data-sym="€"><span class="cur-sym">€</span>EUR</div>
+            <div class="cur-btn" data-code="GBP" data-sym="£"><span class="cur-sym">£</span>GBP</div>
+            <div class="cur-btn" data-code="JPY" data-sym="¥"><span class="cur-sym">¥</span>JPY</div>
+            <div class="cur-btn" data-code="CAD" data-sym="C$"><span class="cur-sym">C$</span>CAD</div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:.8rem">
+          <label>Monthly Budget</label>
+          <input type="number" id="budgetInput" placeholder="e.g. 25000" min="1"/>
+        </div>
+      </div>
+
+      <!-- Group Info Section (Hidden by default) -->
+      <div id="groupSection" style="display:none">
+        <div class="field">
+          <label>Group Name</label>
+          <input type="text" id="groupNameInput" placeholder="e.g. The Smiths, Marketing Team">
+        </div>
+        <div class="field">
+          <label>Group Monthly Budget (₹)</label>
+          <input type="number" id="groupBudgetInput" placeholder="50000">
+        </div>
       </div>
 
       <div class="preview-box" id="previewBox">
@@ -98,11 +120,9 @@
 
       <div class="cats">
         <p>Track expenses across these categories:</p>
-        <div class="cat-chips">
+        <div class="cat-chips" style="opacity:0.8">
           <span class="cat-chip">🍔 Food</span><span class="cat-chip">🚗 Travel</span>
           <span class="cat-chip">🛍 Shopping</span><span class="cat-chip">💡 Bills</span>
-          <span class="cat-chip">🎬 Entertainment</span><span class="cat-chip">❤️ Health</span>
-          <span class="cat-chip">📚 Education</span><span class="cat-chip">📦 Other</span>
         </div>
       </div>
 
@@ -115,18 +135,39 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="js/common.js"></script>
   <script>
     window.initTheme();
     document.getElementById('themeBtn').onclick = window.toggleTheme;
 
-    var selCode = 'INR', selSym = '₹';
+    var selCode = 'INR', selSym = '₹', setupMode = 'personal';
+
+    // Mode selection
+    document.getElementById('modePersonal').onclick = function() {
+      setupMode = 'personal';
+      this.classList.add('sel');
+      document.getElementById('modeGroup').classList.remove('sel');
+      document.getElementById('personalSection').style.display = 'block';
+      document.getElementById('groupSection').style.display = 'none';
+      updatePreview();
+    };
+    document.getElementById('modeGroup').onclick = function() {
+      setupMode = 'group';
+      this.classList.add('sel');
+      document.getElementById('modePersonal').classList.remove('sel');
+      document.getElementById('personalSection').style.display = 'none';
+      document.getElementById('groupSection').style.display = 'block';
+      updatePreview();
+    };
 
     // Currency selection
     document.getElementById('curGrid').onclick = function(e) {
       var btn = e.target.closest('.cur-btn');
       if (!btn) return;
-      document.querySelectorAll('.cur-btn').forEach(function(b){ b.classList.remove('sel'); });
+      document.querySelectorAll('#curGrid .cur-btn').forEach(function(b){ b.classList.remove('sel'); });
       btn.classList.add('sel');
       selCode = btn.dataset.code;
       selSym  = btn.dataset.sym;
@@ -134,13 +175,18 @@
     };
 
     document.getElementById('budgetInput').oninput = updatePreview;
+    document.getElementById('groupBudgetInput').oninput = updatePreview;
 
     function updatePreview() {
-      var val = Number(document.getElementById('budgetInput').value);
+      var val = (setupMode === 'personal') 
+        ? Number(document.getElementById('budgetInput').value)
+        : Number(document.getElementById('groupBudgetInput').value);
+      
       var box = document.getElementById('previewBox');
       if (val > 0) {
         box.style.display = 'flex';
-        document.getElementById('previewAmt').textContent = selSym + val.toLocaleString('en-IN');
+        var sym = (setupMode === 'personal') ? selSym : '₹';
+        document.getElementById('previewAmt').textContent = sym + val.toLocaleString('en-IN');
       } else {
         box.style.display = 'none';
       }
@@ -154,31 +200,82 @@
       el._t = setTimeout(function(){ el.classList.remove('show'); }, 3000);
     }
 
-    // Auth guard — redirect if not logged in
-    fbAuth.onAuthStateChanged(function(user) {
+    // Auth guard — redirect if already set up
+    window.fbAuth.onAuthStateChanged(function(user) {
       if (!user) { window.location.href = 'index.html'; return; }
-      fbDB.ref('users/'+user.uid).get().then(function(snap) {
-        var d = snap.val();
-        if (d && d.budget) { window.location.href = 'dashboard.html'; }
+      window.fbFS.collection('users').doc(user.uid).get().then(function(doc) {
+        if (doc.exists && (doc.data().budget || doc.data().groupId)) { 
+          window.location.href = 'dashboard.html'; 
+        }
       });
     });
 
     document.getElementById('saveBtn').onclick = function() {
-      var budget = Number(document.getElementById('budgetInput').value);
-      if (!budget || budget <= 0) { toast('Please enter a valid budget', 'error'); return; }
-      var user = fbAuth.currentUser;
+      var user = window.fbAuth.currentUser;
       if (!user) { window.location.href = 'index.html'; return; }
+      
       var btn = document.getElementById('saveBtn');
-      btn.disabled = true; btn.textContent = 'Saving…';
-      fbDB.ref('users/'+user.uid).update({
-        budget: budget, currency: selCode, symbol: selSym,
-        email: user.email, setupAt: Date.now()
-      }).then(function() {
-        window.location.href = 'dashboard.html';
-      }).catch(function(e) {
-        toast('Error: '+e.message, 'error');
-        btn.disabled = false; btn.textContent = 'Get Started →';
-      });
+      btn.disabled = true; btn.textContent = 'Initialising…';
+
+      if (setupMode === 'personal') {
+        var budget = Number(document.getElementById('budgetInput').value);
+        if (!budget || budget <= 0) { toast('Please enter a valid budget', 'error'); btn.disabled = false; return; }
+        
+        window.fbFS.collection('users').doc(user.uid).set({
+          budget: budget, 
+          currency: selCode, 
+          symbol: selSym,
+          email: user.email, 
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          groupId: null
+        }, { merge: true }).then(function() {
+          window.location.href = 'dashboard.html';
+        }).catch(function(e) {
+          toast('Error: '+e.message, 'error');
+          btn.disabled = false; btn.textContent = 'Get Started →';
+        });
+
+      } else {
+        // Create Group Mode
+        var gName = document.getElementById('groupNameInput').value.trim();
+        var gBudget = Number(document.getElementById('groupBudgetInput').value);
+        
+        if (!gName) { toast('Please enter a group name', 'error'); btn.disabled = false; return; }
+        if (!gBudget || gBudget <= 0) { toast('Please enter a valid budget', 'error'); btn.disabled = false; return; }
+
+        // Use the existing createGroup function if available, or implement here
+        if (typeof window.createGroup === 'function') {
+           window.createGroup(gName, gBudget);
+        } else {
+          // Fallback creation logic (consistent with groups.js)
+          var groupRef = window.fbFS.collection('groups').doc();
+          var batch = window.fbFS.batch();
+          batch.set(groupRef, {
+            name: gName,
+            budget: gBudget,
+            currency: 'INR',
+            symbol: '₹',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: user.uid
+          });
+          batch.set(groupRef.collection('members').doc(user.uid), {
+            role: 'admin',
+            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          batch.commit().then(function() {
+            return window.fbFS.collection('users').doc(user.uid).set({
+              groupId: groupRef.id,
+              groupName: gName,
+              role: 'admin'
+            }, { merge: true });
+          }).then(function() {
+            window.location.href = 'dashboard.html';
+          }).catch(function(e) {
+            toast('Error: '+e.message, 'error');
+            btn.disabled = false;
+          });
+        }
+      }
     };
   </script>
 </body>

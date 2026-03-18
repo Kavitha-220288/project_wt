@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics — FinBuddy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Analytics-specific styles ── */
+    .analytics-hero {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+    }
+
+    .hero-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem 1.2rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--tr);
+      animation: fadeUp 0.5s ease both;
+    }
+    .hero-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .hero-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .hero-card.blue::before   { background: linear-gradient(90deg, #5b7cfa, #7c5bf5); }
+    .hero-card.green::before  { background: linear-gradient(90deg, #34d399, #06b6d4); }
+    .hero-card.red::before    { background: linear-gradient(90deg, #f87171, #fb923c); }
+
+    .hc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .hc-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+    .hc-actions { display: flex; gap: 0.3rem; }
+    .hc-icon-btn { background: var(--card2); border: 1px solid var(--border); color: var(--muted); width: 26px; height: 26px; border-radius: 6px; cursor: default; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
+
+    /* Gauge */
+    .gauge-row { display: flex; align-items: flex-end; justify-content: center; gap: 1.2rem; margin-bottom: 0.8rem; }
+    .gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+    .gauge-canvas { display: block; }
+    .gauge-title { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .gauge-values { display: flex; justify-content: space-between; }
+    .gv { text-align: center; }
+    .gv-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .gv-num { font-size: 1.05rem; font-weight: 700; margin-top: 0.15rem; color: var(--text); font-variant-numeric: tabular-nums; }
+
+    /* Balance trend */
+    .bt-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+    .bt-period { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.2rem; }
+    .bt-amount { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text); }
+    .bt-vs { text-align: right; }
+    .bt-vs-label { font-size: 0.68rem; color: var(--muted); margin-bottom: 0.3rem; }
+    .vs-badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.3rem 0.65rem; border-radius: 20px;
+      font-size: 0.82rem; font-weight: 700;
+    }
+    .vs-badge.up   { background: rgba(52,211,153,0.15); color: #34d399; }
+    .vs-badge.down { background: rgba(248,113,113,0.15); color: #f87171; }
+    .chart-wrap-trend { position: relative; height: 130px; }
+
+    /* Expense structure */
+    .es-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; }
+    .es-period  { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.2rem; }
+    .es-total   { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--danger); letter-spacing: -0.03em; }
+    .es-body    { display: flex; align-items: center; gap: 1rem; }
+    .es-donut   { position: relative; width: 120px; height: 120px; flex-shrink: 0; }
+    .es-legend  { flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+    .es-leg-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; }
+    .es-leg-dot  { width: 10px; height: 10px; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; }
+    .es-leg-name { flex: 1; color: var(--text); display: flex; align-items: center; }
+    .es-leg-amt  { color: var(--muted); font-weight: 500; }
+
+    /* Row layout */
+    .analytics-row { display: grid; gap: 1.1rem; }
+    .analytics-row.two-col  { grid-template-columns: 1fr 1fr; }
+    .analytics-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* Summary metric cards */
+    .metric-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.2rem 1.3rem;
+      box-shadow: var(--shadow-sm); animation: fadeUp 0.5s ease both;
+      transition: all var(--tr);
+    }
+    .metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .mc-icon { font-size: 1.4rem; margin-bottom: 0.6rem; }
+    .mc-val  { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); margin-bottom: 0.2rem; }
+    .mc-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .mc-sub  { font-size: 0.72rem; margin-top: 0.4rem; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; }
+    .mc-sub.up   { background: rgba(52,211,153,0.12); color: #34d399; }
+    .mc-sub.down { background: rgba(248,113,113,0.12); color: #f87171; }
+    .mc-sub.neutral { background: var(--card2); color: var(--muted); }
+
+    /* Chart cards */
+    .chart-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem 1.5rem;
+      box-shadow: var(--shadow-sm); animation: fadeUp 0.5s ease both;
+      transition: background var(--tr), border-color var(--tr);
+    }
+    .cc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+    .cc-title  { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--text); }
+    .cc-sub    { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+
+    /* Category list */
+    .cat-rank-list { display: flex; flex-direction: column; gap: 0.7rem; }
+    .cat-rank-item { display: flex; align-items: center; gap: 0.75rem; }
+    .cat-rank-num  { font-size: 0.65rem; font-weight: 700; color: var(--muted); width: 14px; text-align: right; flex-shrink: 0; }
+    .cat-rank-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+    .cat-rank-info { flex: 1; min-width: 0; }
+    .cat-rank-name { font-size: 0.82rem; font-weight: 500; color: var(--text); }
+    .cat-rank-bar-bg { height: 4px; background: var(--card2); border-radius: 2px; margin-top: 0.25rem; overflow: hidden; }
+    .cat-rank-bar-fill { height: 100%; border-radius: 2px; }
+    .cat-rank-amt  { font-size: 0.82rem; font-weight: 700; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cat-rank-pct  { font-size: 0.7rem; color: var(--muted); text-align: right; }
+
+    /* Top table */
+    .exp-table th { background: var(--card2); }
+    .rank-badge { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; }
+
+    /* Period pill selector */
+    .period-pills { display: flex; gap: 0.3rem; background: var(--card2); border-radius: 10px; padding: 3px; }
+    .period-pill  { padding: 0.42rem 0.9rem; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-family: 'Sora', sans-serif; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .period-pill.active { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(91,124,250,0.3); }
+
+    @media (max-width: 1200px) {
+      .analytics-hero { grid-template-columns: 1fr; }
+      .analytics-row.two-col   { grid-template-columns: 1fr; }
+      .analytics-row.three-col { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .analytics-row.three-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">      <div class="brand-icon">📈</div>
+      <span class="brand-name">FinBuddy</span>
+</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item active"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html"   class="nav-item"><span class="nav-icon">📄</span>Reports</a>
+      <a href="groups.html"    class="nav-item"><span class="nav-icon">👨‍👩‍👧‍👦</span>Family Groups</a>
+      <a href="settings.html"  class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="userAvatar">U</div><div><div class="user-name" id="userName">—</div><div class="user-role">Member</div></div></div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div><h1 class="page-title">Analytics</h1><p class="page-sub">Visual insights into your spending</p></div>
+      </div>
+      <div class="topbar-right">
+        <select class="period-select" id="periodSelect">
+          <option value="week" selected>Week</option>
+          <option value="month">Month</option>
+          <option value="3month">3 Months</option>
+          <option value="year">Year</option>
+        </select>
+        <div class="notif-wrapper">
+          <button class="notif-btn" id="notifBtn" onclick="window.location.href='groups.html'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- HERO ROW: Dashboard (gauges) · Balance Trend · Expense Structure -->
+      <div class="analytics-hero">
+
+        <!-- Gauges -->
+        <div class="hero-card blue">
+          <div class="hc-top">
+            <span class="hc-label">Dashboard</span>
+          </div>
+          <div class="gauge-row">
+            <div class="gauge-wrap"><canvas class="gauge-canvas" id="gaugeBalance" width="90" height="55"></canvas><span class="gauge-title">Balance</span></div>
+            <div class="gauge-wrap"><canvas class="gauge-canvas" id="gaugeCashflow" width="90" height="55"></canvas><span class="gauge-title">Cash Flow</span></div>
+            <div class="gauge-wrap"><canvas class="gauge-canvas" id="gaugeSpending" width="90" height="55"></canvas><span class="gauge-title">Spending</span></div>
+          </div>
+          <div class="gauge-values">
+            <div class="gv"><div class="gv-label">Balance</div><div class="gv-num" id="gvBalance">—</div></div>
+            <div class="gv"><div class="gv-label">Cash Flow</div><div class="gv-num" id="gvCashflow" style="color:var(--danger)">—</div></div>
+            <div class="gv"><div class="gv-label">Spending</div><div class="gv-num" id="gvSpending" style="color:var(--danger)">—</div></div>
+          </div>
+        </div>
+
+        <!-- Balance Trend -->
+        <div class="hero-card green">
+          <div class="hc-top">
+            <span class="hc-label">Balance Trend</span>
+          </div>
+          <div class="bt-header">
+            <div>
+              <div class="bt-period">This month</div>
+              <div class="bt-amount" id="btAmount">—</div>
+            </div>
+            <div class="bt-vs">
+              <div class="bt-vs-label">VS Previous Period</div>
+              <div class="vs-badge down" id="btVsBadge">—</div>
+            </div>
+          </div>
+          <div class="chart-wrap-trend"><canvas id="trendChart"></canvas></div>
+        </div>
+
+        <!-- Expense Structure -->
+        <div class="hero-card red">
+          <div class="hc-top">
+            <span class="hc-label">Expenses Structure</span>
+          </div>
+          <div class="es-header">
+            <div>
+              <div class="es-period">This month</div>
+              <div class="es-total" id="esTotal">—</div>
+            </div>
+            <div class="bt-vs">
+              <div class="bt-vs-label">VS Previous Period</div>
+              <div class="vs-badge down" id="esVsBadge">—</div>
+            </div>
+          </div>
+          <div class="es-body">
+            <div class="es-donut"><canvas id="esDonut"></canvas></div>
+            <div class="es-legend" id="esLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- METRIC CARDS -->
+      <div class="analytics-row three-col" id="metricsRow">
+        <div class="metric-card" style="animation-delay:.05s"><div class="mc-icon">📈</div><div class="mc-val" id="mAvg">—</div><div class="mc-label">Avg Daily Spend</div><div class="mc-sub neutral" id="mAvgSub">this period</div></div>
+        <div class="metric-card" style="animation-delay:.1s"><div class="mc-icon">🏆</div><div class="mc-val" id="mTop">—</div><div class="mc-label">Top Category</div><div class="mc-sub neutral" id="mTopSub">biggest expense</div></div>
+        <div class="metric-card" style="animation-delay:.15s"><div class="mc-icon">📅</div><div class="mc-val" id="mPeak">—</div><div class="mc-label">Peak Spend Day</div><div class="mc-sub neutral" id="mPeakSub">highest single day</div></div>
+        <div class="metric-card" style="animation-delay:.2s"><div class="mc-icon">💹</div><div class="mc-val" id="mSave">—</div><div class="mc-label">Savings Rate</div><div class="mc-sub neutral" id="mSaveSub">of budget</div></div>
+        <div class="metric-card" style="animation-delay:.25s"><div class="mc-icon">🧾</div><div class="mc-val" id="mTxns">—</div><div class="mc-label">Transactions</div><div class="mc-sub neutral" id="mTxnSub">this period</div></div>
+        <div class="metric-card" style="animation-delay:.3s"><div class="mc-icon">⚡</div><div class="mc-val" id="mBiggest">—</div><div class="mc-label">Biggest Expense</div><div class="mc-sub neutral" id="mBiggestSub">single transaction</div></div>
+      </div>
+
+      <!-- BAR CHART + CATEGORY RANK -->
+      <div class="analytics-row two-col">
+        <div class="chart-card">
+          <div class="cc-header">
+            <div><div class="cc-title">Daily Spending</div><div class="cc-sub">Last 30 days breakdown</div></div>
+          </div>
+          <div style="position:relative;height:220px"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-header">
+            <div><div class="cc-title">Category Ranking</div><div class="cc-sub">Spending by category</div></div>
+          </div>
+          <div class="cat-rank-list" id="catRankList"></div>
+        </div>
+      </div>
+
+
+      <!-- TOP EXPENSES TABLE -->
+      <div class="chart-card">
+        <div class="cc-header">
+          <div><div class="cc-title">Top Expenses</div><div class="cc-sub">Highest transactions this period</div></div>
+          <span class="badge badge-blue" id="topCount">0 items</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="exp-table">
+            <thead><tr><th>#</th><th>Title</th><th>Category</th><th>Date</th><th>Amount</th></tr></thead>
+            <tbody id="topTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/analytics.js"></script>
+</body>
+</html>

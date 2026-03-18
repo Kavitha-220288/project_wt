@@ -1,4 +1,4 @@
-# 💳 Walletly — Expense Tracker
+# 📈 FinBuddy - AI Expense Tracker
 
 A personal finance tracker built with vanilla HTML/CSS/JS and Firebase. No frameworks, no build tools.
 
@@ -16,7 +16,7 @@ A personal finance tracker built with vanilla HTML/CSS/JS and Firebase. No frame
 ## Project Structure
 
 ```
-walletly/
+finbuddy/
 ├── index.html       ← Login / Sign up
 ├── setup.html       ← First-time budget setup
 ├── dashboard.html   ← Expense tracker

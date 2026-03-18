@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reports — FinBuddy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css"/>
+</head>
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">      <div class="brand-icon">📈</div>
+      <span class="brand-name">FinBuddy</span>
+</div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html"   class="nav-item active"><span class="nav-icon">📄</span>Reports</a>
+      <a href="groups.html"    class="nav-item"><span class="nav-icon">👨‍👩‍👧‍👦</span>Family Groups</a>
+      <a href="settings.html"  class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info"><div class="user-avatar" id="userAvatar">U</div><div><div class="user-name" id="userName">—</div><div class="user-role">Member</div></div></div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div><h1 class="page-title">Reports for <span id="topUserName" style="color:var(--accent)">User</span></h1><p class="page-sub">Download your expense reports</p></div>
+      </div>
+      <div class="topbar-right">
+        <div class="notif-wrapper">
+          <button class="notif-btn" id="notifBtn" onclick="window.location.href='groups.html'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- Top Split Section -->
+      <div class="settings-grid" style="margin-bottom: 2rem; gap: 2rem; align-items: start;">
+        
+        <!-- Report Configuration Card -->
+        <div class="card report-card" id="reportCardsContainer" style="position: relative; padding: 1.5rem;">
+          
+          <div style="position: absolute; top: 1.5rem; right: 1.5rem; z-index: 10;">
+            <select class="period-select" id="reportTypeSelect">
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+
+          <!-- Weekly -->
+          <div id="card-weekly" style="display: none;">
+            <div class="rc-icon" style="background:rgba(91,124,250,.12)">📅</div>
+            <h3 style="font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:0.4rem;color:var(--text)">Weekly Report</h3>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">All expenses for a chosen week, grouped by category with totals.</p>
+            <div class="field" style="margin-top:1rem">
+              <label>Select Week</label>
+              <input type="week" id="weekPicker"/>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1rem">
+              <button class="btn-primary" onclick="downloadReport('weekly','csv')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">⬇ CSV</button>
+              <button class="btn-secondary" onclick="downloadReport('weekly','pdf')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">🖨 PDF</button>
+            </div>
+          </div>
+
+          <!-- Monthly -->
+          <div id="card-monthly">
+            <div class="rc-icon" style="background:rgba(52,211,153,.12)">🗓</div>
+            <h3 style="font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:0.4rem;color:var(--text)">Monthly Report</h3>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Full month summary with budget comparison and category breakdown.</p>
+            <div class="field" style="margin-top:1rem">
+              <label>Select Month</label>
+              <input type="month" id="monthPicker"/>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1rem">
+              <button class="btn-primary" onclick="downloadReport('monthly','csv')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">⬇ CSV</button>
+              <button class="btn-secondary" onclick="downloadReport('monthly','pdf')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">🖨 PDF</button>
+            </div>
+          </div>
+
+          <!-- Custom range -->
+          <div id="card-custom" style="display: none;">
+            <div class="rc-icon" style="background:rgba(240,180,41,.12)">📆</div>
+            <h3 style="font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:0.4rem;color:var(--text)">Custom Range</h3>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Pick any start and end date to generate a custom expense report.</p>
+            <div class="field-row" style="margin-top:1rem">
+              <div class="field"><label>From</label><input type="date" id="fromDate"/></div>
+              <div class="field"><label>To</label><input type="date" id="toDate"/></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:.6rem;margin-top:1rem">
+              <button class="btn-primary" onclick="downloadReport('custom','csv')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">⬇ CSV</button>
+              <button class="btn-secondary" onclick="downloadReport('custom','pdf')" style="flex:0 0 auto;min-width:90px;font-size:.8rem">🖨 PDF</button>
+            </div>
+          </div>
+        
+        <!-- Right side: Quick Insights -->
+        <div class="card" id="insightsCard" style="margin-top: 3rem;">
+          <div class="section-header" style="margin-bottom:0.5rem">
+            <h2>Period Insights</h2>
+            <span class="badge badge-blue" id="insightsBadge">Loading...</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--muted); margin-bottom: 1.2rem; line-height: 1.4;">A quick glance at your spending for the selected report period.</p>
+          <div id="insightsTotals" class="report-totals" style="margin-top: 0; padding-top: 0; border-top: none; display: flex; flex-direction: column; gap: 0.8rem;">
+            <!-- populated via js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Transactions table -->
+      <div class="card">
+        <div class="section-header">
+          <h2>Transactions Preview</h2>
+          <span class="badge badge-outline" id="previewCount">0 items</span>
+        </div>
+        <div style="margin-top:1.5rem;overflow-x:auto">
+          <table class="exp-table" id="previewTable">
+            <thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Note</th><th>Amount</th></tr></thead>
+            <tbody id="previewBody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/reports.js"></script>
+</body>
+</html>
