@@ -7,12 +7,12 @@ const getFS = () => window.fbFS;
 const getAuth = () => window.fbAuth;
 
 function showInsights() {
-    const insights = document.getElementById('websiteInsights');
-    insights.style.display = 'block';
-    window.scrollTo({
-        top: insights.offsetTop - 100,
-        behavior: 'smooth'
-    });
+  const insights = document.getElementById('websiteInsights');
+  insights.style.display = 'block';
+  window.scrollTo({
+    top: insights.offsetTop - 100,
+    behavior: 'smooth'
+  });
 }
 
 // Scroll revealing
@@ -90,7 +90,7 @@ function showToast(msg) {
 }
 
 // Auth Actions
-document.getElementById('authBtn').onclick = function() {
+document.getElementById('authBtn').onclick = function () {
   const email = document.getElementById('authEmail').value.trim();
   const pass = document.getElementById('authPass').value;
   if (!email || !pass) { showToast('Please fill all fields'); return; }
@@ -123,25 +123,25 @@ document.getElementById('authBtn').onclick = function() {
 };
 
 // Google Sign-In
-document.getElementById('googleBtn').onclick = function() {
+document.getElementById('googleBtn').onclick = function () {
   // Robust Check for Firebase components
   const auth = window.fbAuth || (window.firebase && firebase.auth());
   const fs = window.fbFS || (window.firebase && firebase.firestore());
-  
+
   if (!auth) {
     showToast('Authentication system initializing...');
     return;
   }
-  
+
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).then(result => {
     const user = result.user;
-    
+
     if (!fs) {
       showToast('Database connection failed');
       return;
     }
-    
+
     fs.collection('users').doc(user.uid).get().then(doc => {
       if (!doc.exists) {
         fs.collection('users').doc(user.uid).set({
@@ -164,14 +164,14 @@ document.getElementById('googleBtn').onclick = function() {
 function checkUserAndRedirect(user) {
   if (!user) return;
   console.log("Checking redirect for user:", user.uid);
-  
+
   const fs = window.fbFS || (window.firebase && firebase.firestore());
   if (!fs) {
-      console.warn("Firestore not ready, retrying...");
-      setTimeout(() => checkUserAndRedirect(user), 200);
-      return;
+    console.warn("Firestore not ready, retrying...");
+    setTimeout(() => checkUserAndRedirect(user), 200);
+    return;
   }
-  
+
   fs.collection('users').doc(user.uid).get().then(doc => {
     if (doc.exists) {
       const data = doc.data();
