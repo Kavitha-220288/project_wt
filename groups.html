@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Groups — FinBuddy</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    .groups-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .section-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .section-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0.8;
+    }
+
+    .group-header-info {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .group-icon-large {
+      width: 68px;
+      height: 68px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      box-shadow: 0 10px 25px rgba(99, 102, 241, .35);
+    }
+
+    .group-titles h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .group-titles p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* Invitation items */
+    .invitation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      background: var(--card2);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 0.85rem;
+      transition: 0.2s;
+    }
+
+    .invitation-item:hover {
+      border-color: var(--accent);
+      transform: translateX(4px);
+    }
+
+    .btn-sm {
+      padding: 0.6rem 1.3rem;
+      border-radius: 10px;
+      font-size: 0.83rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.25s;
+      border: none;
+      font-family: 'Sora', sans-serif;
+    }
+
+    .btn-accept {
+      background: var(--success);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(52, 211, 153, .3);
+    }
+
+    .btn-accept:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(52, 211, 153, .4);
+    }
+
+    .btn-decline {
+      background: transparent;
+      color: var(--danger);
+      border: 1.5px solid var(--danger) !important;
+    }
+
+    .btn-decline:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* Member grid */
+    .member-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+
+    .member-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: 0.3s;
+    }
+
+    .member-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .member-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .member-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .member-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .member-email {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .member-role {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .member-role.owner {
+      color: var(--gold);
+    }
+
+    .status-badge {
+      padding: 0.3rem 0.75rem;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-badge.joined {
+      background: rgba(52, 211, 153, .1);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, .2);
+    }
+
+    .status-badge.pending {
+      background: rgba(240, 180, 41, .1);
+      color: var(--gold);
+      border: 1px solid rgba(240, 180, 41, .2);
+    }
+
+    .btn-cancel {
+      background: rgba(248, 113, 113, .08);
+      color: var(--danger);
+      border: 1px solid rgba(248, 113, 113, .2);
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    .btn-cancel:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* Invite box */
+    .invite-box {
+      margin-top: 2rem;
+      padding: 1.75rem;
+      background: rgba(99, 102, 241, .04);
+      border-radius: 18px;
+      border: 1.5px dashed rgba(99, 102, 241, .35);
+    }
+
+    .invite-box h4 {
+      font-size: 0.88rem;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+    }
+
+    .invite-input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .invite-input-group input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--card2);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.88rem;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    .invite-input-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91, 124, 250, .12);
+    }
+
+    .member-count-badge {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* Notif wrapper */
+    .notif-wrapper {
+      position: relative;
+    }
+
+    .notif-btn {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.2s;
+    }
+
+    .notif-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--danger);
+      color: #fff;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg);
+    }
+  </style>
+</head>
+
+<body>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">📈</div>
+      <span class="brand-name">FinBuddy</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span>Dashboard</a>
+      <a href="analytics.html" class="nav-item"><span class="nav-icon">📊</span>Analytics</a>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📄</span>Reports</a>
+      <a href="groups.html" class="nav-item active"><span class="nav-icon">👨‍👩‍👧‍👦</span>Family Groups</a>
+      <a href="settings.html" class="nav-item"><span class="nav-icon">⚙</span>Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div>
+          <div class="user-name" id="userName">—</div>
+          <div class="user-role">Member</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <h1 class="page-title">Family Budget</h1>
+          <p class="page-sub">Collaborate on shared expenses with your family</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="notif-wrapper">
+          <button class="notif-btn" id="notifBtn" onclick="window.location.href='groups.html'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="groups-container">
+
+        <!-- ── Pending Invitations (shown to invited users) ── -->
+        <div id="invitationsCard" class="section-card" style="display:none">
+          <div class="group-header-info">
+            <div class="group-icon-large"
+              style="background:linear-gradient(135deg,var(--gold),#fb923c);box-shadow:0 10px 25px rgba(240,180,41,.3)">
+              💌</div>
+            <div class="group-titles">
+              <h3>Pending Invitations</h3>
+              <p>You have been invited to join a family group</p>
+            </div>
+          </div>
+          <div id="inviteList"></div>
+        </div>
+
+        <!-- ── Create Group (no group yet) ── -->
+        <div id="createGroupSection" class="section-card" style="display:none">
+          <div class="group-header-info">
+            <div class="group-icon-large">🏠</div>
+            <div class="group-titles">
+              <h3>Start a Family Group</h3>
+              <p>Create a shared wallet for your family or organization</p>
+            </div>
+          </div>
+          <div class="field">
+            <label>Group Name</label>
+            <input type="text" id="groupName" placeholder="e.g. The Smiths, Marketing Team">
+          </div>
+          <div class="field">
+            <label>Monthly Budget (₹)</label>
+            <input type="number" id="groupBudget" placeholder="50000">
+          </div>
+          <button class="btn-primary" id="btnCreateGroup" style="margin-top:1rem;padding:0.85rem;">
+            Create Family Workspace
+          </button>
+        </div>
+
+        <!-- ── Group Management (already in a group) ── -->
+        <div id="groupDetailsSection" class="section-card" style="display:none">
+          <div class="group-header-info">
+            <div class="group-icon-large">🏘️</div>
+            <div class="group-titles">
+              <div style="display:flex;align-items:center;">
+                <h3 id="currentGroupName">Your Family Group</h3>
+                <button id="btnEditGroupName" style="display:none;background:none;border:none;cursor:pointer;color:var(--accent);font-size:1.2rem;margin-left:0.5rem" title="Edit Group Name" onclick="editGroupName()">✏️</button>
+              </div>
+              <p>All members can log and view shared expenses</p>
+            </div>
+          </div>
+
+          <!-- Owner-only invite box -->
+          <div id="inviteSection" class="invite-box" style="display:none">
+            <h4>Invite a Member</h4>
+            <p style="font-size:.83rem;color:var(--muted);margin-bottom:1rem">
+              Enter a user's <strong>Email Address</strong> or <strong>Firebase UID</strong> to invite them.
+            </p>
+            <div class="invite-input-group">
+              <input type="text" id="inviteEmail" placeholder="email@example.com or user-uid">
+              <button class="btn-primary" style="width:auto;padding:0 1.5rem;white-space:nowrap"
+                onclick="inviteMember(document.getElementById('inviteEmail').value)">
+                Send Invite
+              </button>
+            </div>
+          </div>
+
+          <div
+            style="display:flex;align-items:center;justify-content:space-between;margin-top:2.5rem;margin-bottom:1.25rem">
+            <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text)">Group Members</h2>
+            <div class="member-count-badge" id="memberCountText">0 Members</div>
+          </div>
+
+          <div id="memberList" class="member-grid"></div>
+
+          <div style="margin-top:2rem;text-align:center">
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.5rem">
+              All members can add expenses from the
+              <a href="dashboard.html" style="color:var(--accent);text-decoration:none;font-weight:600">Dashboard</a>
+            </p>
+            <div style="display:flex;justify-content:center;gap:1rem;">
+              <button class="btn-secondary" id="btnLeaveGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="leaveGroup()">Leave Group</button>
+              <button class="btn-secondary" id="btnDeleteGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="deleteGroup()">Delete Group</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/groups.js"></script>
+  <script>
+    window.requireAuth(function (user, data) {
+
+      // Load notifications badge
+      if (typeof listenForNotifications === 'function') {
+        listenForNotifications(user.uid);
+      }
+
+      // Always load incoming invites (queries by toUid — correct)
+      loadInvites();
+
+      // Show correct section
+      if (data.groupId) {
+        window.fbFS.collection('groups').doc(data.groupId).get().then(function (gDoc) {
+          if (gDoc.exists) {
+            document.getElementById('groupDetailsSection').style.display = 'block';
+            loadGroupMembers(data.groupId, user.uid);
+          } else {
+            // Group ID exists on user but group doc is missing (deleted?)
+            document.getElementById('createGroupSection').style.display = 'block';
+          }
+        }).catch(function () {
+          document.getElementById('createGroupSection').style.display = 'block';
+        });
+      } else {
+        document.getElementById('createGroupSection').style.display = 'block';
+      }
+
+      // ── Event Listeners ──
+      document.getElementById('btnCreateGroup').onclick = function () {
+        var name = document.getElementById('groupName').value;
+        var budget = document.getElementById('groupBudget').value;
+        createGroup(name, budget);
+      };
+    });
+  </script>
+</body>
+
+</html>
