@@ -8,7 +8,244 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <style>
+    :root {
+      --bg: #030712;
+      --card: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --accent2: #10b981;
+      --accent-glow: rgba(99, 102, 241, 0.5);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --nav-bg: rgba(15, 23, 42, 0.8);
+      --glass: blur(16px) saturate(180%);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --card: rgba(255, 255, 255, 0.8);
+      --card-border: rgba(0, 0, 0, 0.05);
+      --accent: #4f46e5;
+      --text: #111827;
+      --muted: #6b7280;
+      --nav-bg: rgba(255, 255, 255, 0.8);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Sora', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Background Mesh Gradient */
+    .bg-mesh {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: 
+        radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+      z-index: -1;
+    }
+
+    /* Professional Navbar */
+    nav {
+      position: fixed; top: 0; width: 100%; padding: 1rem 10%;
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--nav-bg); backdrop-filter: var(--glass);
+      z-index: 1000; border-bottom: 1px solid var(--card-border);
+      transition: padding 0.3s;
+    }
+    nav.scrolled { padding: 0.7rem 10%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+
+    .brand { display: flex; align-items: center; gap: 0.8rem; text-decoration: none; }
+    .brand-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 20px var(--accent-glow); font-size: 1.4rem;
+    }
+    .brand-name {
+      font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 800;
+      background: linear-gradient(to right, var(--text), var(--muted));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .btn-nav {
+      padding: 0.8rem 1.6rem; border-radius: 12px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none;
+    }
+    .btn-signin {
+      color: #fff; border: none; background: var(--accent);
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+    .btn-signin:hover { transform: translateY(-3px); box-shadow: 0 8px 25px var(--accent-glow); }
+
+    .btn-signup { background: transparent; color: var(--text); border: 1px solid var(--card-border); margin-left: 1rem; }
+    .btn-signup:hover { background: var(--card-border); border-color: var(--accent); }
+
+    /* Hero Section - Premium Look */
+    .hero {
+      min-height: 100vh; padding: 10rem 10% 5rem;
+      display: flex; align-items: center; gap: 4rem;
+      max-width: 1400px; margin: 0 auto;
+    }
+    .hero-content { flex: 1.2; text-align: left; opacity: 0; transform: translateY(30px); animation: fadeInUp 0.8s forwards; }
+    .hero-visual { flex: 1; opacity: 0; transform: scale(0.9); animation: zoomIn 1s 0.3s forwards; }
+
+    .hero-content h1 {
+      font-family: 'Playfair Display', serif; font-size: 4.8rem; line-height: 1.05;
+      margin-bottom: 2rem; background: linear-gradient(135deg, var(--text) 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-content h1 span { color: var(--accent); -webkit-text-fill-color: var(--accent); font-style: italic; }
+    .hero-content p { font-size: 1.35rem; color: var(--muted); margin-bottom: 3.5rem; max-width: 600px; }
+
+    /* Explore Button Enhancement */
+    .btn-explore {
+      padding: 1.2rem 3rem; background: rgba(99, 102, 241, 0.1); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 50px; font-size: 1.1rem;
+      font-weight: 700; cursor: pointer; backdrop-filter: var(--glass);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); transition: 0.4s;
+    }
+    .btn-explore:hover { background: var(--accent); color: #fff; box-shadow: 0 0 30px var(--accent-glow); transform: scale(1.05); }
+
+    .hero-img {
+      width: 100%; border-radius: 30px; border: 1px solid var(--card-border);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.5); transform: perspective(1000px) rotateY(-15deg) rotateX(5deg);
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hero-img:hover { transform: perspective(1000px) rotateY(0deg) rotateX(0deg); }
+
+    /* Premium Sections */
+    section { padding: 4rem 10%; opacity: 0; transform: translateY(50px); transition: 0.8s; }
+    section.visible { opacity: 1; transform: translateY(0); }
+
+    .hero { min-height: 85vh; padding: 6rem 10% 3rem; }
+
+    .section-title { font-family: 'Playfair Display', serif; font-size: 3.5rem; margin-bottom: 1.5rem; text-align: center; }
+    .section-sub { color: var(--muted); text-align: center; max-width: 750px; margin: 0 auto 5rem; font-size: 1.1rem; }
+
+    /* Glassmorphic Cards */
+    .insights-grid, .grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2.5rem; max-width: 1200px; margin: 0 auto;
+    }
+    .insight-box, .card {
+      background: var(--card); backdrop-filter: var(--glass);
+      border: 1px solid var(--card-border); padding: 3rem; border-radius: 32px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .insight-box:hover, .card:hover { transform: translateY(-15px); border-color: var(--accent); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+    .insight-icon, .card-icon {
+      font-size: 2.5rem; margin-bottom: 1.5rem; width: 64px; height: 64px;
+      background: rgba(99, 102, 241, 0.1); border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+    @keyframes zoomIn { to { opacity: 1; transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Sticky Theme Toggle */
+    .theme-toggle-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 2000; }
+    .theme-toggle {
+      background: var(--card); backdrop-filter: var(--glass);
+      border: 1px solid var(--card-border); width: 60px; height: 60px;
+      border-radius: 50%; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; color: var(--text); transition: 0.4s;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .theme-toggle:hover { transform: scale(1.1) rotate(15deg); border-color: var(--accent); }
+
+    /* Auth Modal Refinement */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(25px); display: none; align-items: center; justify-content: center; z-index: 2000;
+    }
+    .modal-overlay.open { display: flex; }
+    .auth-card {
+      background: #0f172a; border: 1px solid rgba(255,255,255,0.12); width: 100%; max-width: 400px;
+      padding: 2rem; border-radius: 20px; box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+      position: relative; animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalPop { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+    [data-theme="light"] .auth-card { background: #ffffff; border-color: rgba(0,0,0,0.08); }
+
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; margin-left: 0.2rem; }
+    .field input, .field select {
+      width: 100%; padding: 0.9rem 1rem; border-radius: 10px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1); color: var(--text); outline: none; transition: 0.2s;
+      font-family: inherit; font-size: 0.95rem;
+    }
+    [data-theme="light"] .field input { background: #f1f5f9; border-color: #e2e8f0; color: #1e293b; }
+    .field input:focus { border-color: var(--accent); background: rgba(99, 102, 241, 0.08); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+
+    .btn-auth {
+      width: 100%; padding: 0.9rem; background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff;
+      border: none; border-radius: 10px; font-weight: 700; font-size: 1rem;
+      cursor: pointer; margin-top: 1rem; transition: 0.3s;
+      box-shadow: 0 10px 25px var(--accent-glow);
+    }
+    .btn-auth:hover { transform: translateY(-2px); box-shadow: 0 15px 35px var(--accent-glow); }
+    .btn-auth:disabled { background: var(--muted); cursor: not-allowed; opacity: 0.7; transform: none; box-shadow: none; }
+
+    .btn-google {
+      width: 100%; padding: 1rem; background: #fff; color: #1e293b;
+      border: 1px solid #e2e8f0; border-radius: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      cursor: pointer; margin-bottom: 2rem; transition: 0.3s; font-size: 0.95rem;
+    }
+    .btn-google:hover { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+
+    .separator { display: flex; align-items: center; gap: 15px; color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+    .separator::before, .separator::after { content: ''; flex: 1; height: 1px; background: var(--card-border); }
+
+    @media (max-width: 1024px) {
+      .hero { padding: 10rem 2rem 4rem; }
+      .hero-content h1 { font-size: 3.5rem; }
+      nav { padding: 1rem 2rem; }
+    }
+    /* 🔥 Compact Mode for User */
+.compact .field {
+  margin-bottom: 0.8rem !important;
+}
+
+.compact .field input,
+.compact select {
+  padding: 0.7rem !important;
+  font-size: 0.9rem;
+}
+
+.compact .btn-auth {
+  padding: 0.8rem !important;
+  font-size: 0.95rem;
+}
+
+.compact .separator {
+  margin: 1rem 0 !important;
+}
+
+.compact .btn-google {
+  padding: 0.7rem !important;
+  font-size: 0.85rem;
+}
+  </style>
 </head>
 
 <body>
@@ -25,146 +262,198 @@
     </div>
   </nav>
 
-  <section class="hero">
-    <div class="hero-content">
-      <h1>Track your rupee <span>effortlessly...</span></h1>
-      <p>FinBuddy transforms how you visualize spending and track goals. Experience intelligent financial insights that
-        adapt to your lifestyle.</p>
-      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-        <button class="btn-nav btn-signin" style="padding: 1.4rem 3rem; font-size: 1.1rem;"
-          onclick="openAuth('signup')">Get Started Free</button>
+  <section id="home" class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="reveal">Know Where Your <br><span class="text-gradient">Money Goes</span></h1>
+        <p class="hero-subtext reveal">Walletly helps you track expenses, understand spending habits, and build better financial discipline with clear insights.</p>
+        <div class="hero-actions reveal">
+          <button class="btn-primary btn-lg" onclick="openAuth('signup')">Start Free</button>
+          <a href="#demo" class="btn-outline btn-lg"><i class="fas fa-play"></i> See Demo</a>
+        </div>
       </div>
-    </div>
-    <div class="hero-visual">
-      <img src="images/dashboard-mockup.png" class="hero-img" alt="FinBuddy Dashboard Mockup">
-    </div>
-  </section>
-
-  <section class="insights-section">
-    <h2 class="section-title">Total Financial Control</h2>
-    <p class="section-sub">FinBuddy equips you with precision tools to manage both personal and shared finances.
-      Seamlessly track transactions, collaborate on budgets, and gain meaningful insights.</p>
-    <div class="insights-grid">
-      <div class="insight-box">
-        <div class="insight-icon">📊</div>
-        <h3>Intelligent Dashboards</h3>
-        <p>Visualize your monthly budget, spending trends, and remaining balance with interactive real-time charts and
-          stats.</p>
-      </div>
-      <div class="insight-box">
-        <div class="insight-icon">👨‍👩‍👧‍👦</div>
-        <h3>Team Collaboration</h3>
-        <p>Create shared workspaces to manage collective expenses. Invite members and stay synced on group financial
-          goals.</p>
-      </div>
-      <div class="insight-box">
-        <div class="insight-icon">📈</div>
-        <h3>Deep Analytics</h3>
-        <p>Generate detailed weekly and monthly reports. Gain a profound understanding of your financial health with
-          trend analysis.</p>
+      <div class="hero-visual reveal">
+        <div class="glass-card card-pizza floating" style="--d: 0s">
+            <div class="card-header"><span>🍕 Food</span><span>₹ 4,200</span></div>
+            <div class="progress-bar"><div class="fill" style="width:70%"></div></div>
+        </div>
+        <div class="glass-card card-chart floating" style="--d: 0.5s">
+            <canvas id="heroMiniChart"></canvas>
+        </div>
+        <div class="glass-card card-stat floating" style="--d: 1s">
+            <div class="stat-label">Total Spent</div>
+            <div class="stat-val">₹ 14,350</div>
+        </div>
+        <div class="float-icon icon-1">💳</div>
+        <div class="float-icon icon-2">💰</div>
+        <div class="float-icon icon-3">🧾</div>
+        <div class="float-icon icon-4">📊</div>
       </div>
     </div>
   </section>
 
-  <section class="features">
-    <h2 class="section-title">Modern Tools for Smart Money</h2>
-    <p class="section-sub">FinBuddy brings advanced financial features to your fingertips, simplifying your daily money
-      management.</p>
-    <div class="grid">
-      <div class="card">
-        <div class="card-icon">🎙️</div>
-        <h3>Voice-Powered Tracking</h3>
-        <p>Log expenses instantly using intuitive voice commands. Experience a faster, hands-free way to stay on top of
-          your spending.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">📸</div>
-        <h3>Receipt OCR Scanning</h3>
-        <p>Transform paper receipts into digital records. Our built-in OCR automatically extracts amounts and categories
-          for you.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon">💬</div>
-        <h3>AI Assistant Bot</h3>
-        <p>Ask our intelligent assistant about your spending habits, budget status, or for personalized saving
-          suggestions anytime.</p>
+  <section class="story-section problem">
+    <div class="container center-text">
+      <div class="story-card glass reveal">
+        <h2 class="section-title">Small Expenses Add Up Quickly</h2>
+        <p class="section-desc">Daily purchases like coffee, subscriptions, and impulse shopping slowly drain your budget without you noticing.</p>
+        <div class="problem-icons">
+          <div class="p-icon"><i class="fas fa-coffee"></i><span>Coffee</span></div>
+          <div class="p-icon"><i class="fas fa-film"></i><span>Netflix</span></div>
+          <div class="p-icon"><i class="fas fa-shopping-bag"></i><span>Amazon</span></div>
+          <div class="p-icon"><i class="fas fa-hamburger"></i><span>Zomato</span></div>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="explore-section">
-    <h2 class="section-title">Ready to master your money?</h2>
-    <p class="section-sub">Experience the core features that help thousands save smarter every day.</p>
-    <div style="text-align: center;">
-      <button class="btn-explore" onclick="showInsights()">Explore Core Features</button>
+  <section class="story-section solution" id="demo">
+    <div class="container">
+      <div class="solution-grid">
+        <div class="solution-text">
+          <h2 class="reveal">Meet <span class="text-gradient">Walletly</span></h2>
+          <p class="reveal">Walletly automatically organizes your spending so you can clearly see where your money goes. Every rupee accounted for, in real-time.</p>
+        </div>
+        <div class="solution-visual reveal">
+          <div class="mockup-window glass">
+            <div class="mock-header">
+              <div class="dots"><span></span><span></span><span></span></div>
+              <span>walletly.app/dashboard</span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-sidebar"></div>
+              <div class="mock-main">
+                <div class="mock-stats"><div class="m-box"></div><div class="m-box"></div></div>
+                <div class="mock-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="websiteInsights" style="display: none; margin-top: 5rem; animation: fadeIn 0.8s ease;">
-      <div class="insights-grid">
-        <div class="insight-box" style="border-color: var(--accent);">
-          <h3>Voice Entry</h3>
-          <p>Seamless hands-free logging</p>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <div class="section-header center-text">
+        <h2 class="reveal">Powerful Tools for Smarter Spending</h2>
+        <p class="reveal">Built for modern budgeters who value speed and intelligence.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-magic"></i></div><h3>Smart Expense Tracking</h3><p>Automatically record and categorize expenses with mercury-precise accuracy.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-bullseye"></i></div><h3>Budget Planning</h3><p>Set monthly spending limits and track progress against your goals in real-time.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-robot"></i></div><h3>AI Insights</h3><p>Understand spending patterns and receive personalized financial trends analysis.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-chart-pie"></i></div><h3>Visual Reports</h3><p>Interactive graphs and charts for deeper analysis of your financial health.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-sync"></i></div><h3>Secure Cloud Sync</h3><p>Access your financial data anywhere, anytime, with end-to-end encryption.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-bell"></i></div><h3>Budget Alerts</h3><p>Receive instant notifications when nearing your custom spending limits.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="insights" class="insights">
+    <div class="container">
+      <div class="insights-container glass reveal">
+        <div class="insights-grid">
+          <div class="insights-text">
+            <h2>Turn Spending Data Into <br><span class="text-gradient">Clear Insights</span></h2>
+            <p>Walletly transforms raw expense data into visual reports so you can easily understand your financial habits and make better decisions.</p>
+            <ul class="check-list"><li><i class="fas fa-check-circle"></i> Weekly Trend Analysis</li><li><i class="fas fa-check-circle"></i> Category-wise Breakdown</li><li><i class="fas fa-check-circle"></i> AI Savings Potential Audit</li></ul>
+          </div>
+          <div class="insights-viz"><canvas id="insightsChart"></canvas></div>
         </div>
-        <div class="insight-box" style="border-color: var(--accent);">
-          <h3>Receipt Scanning</h3>
-          <p>Effortless digital digitizing</p>
-        </div>
-        <div class="insight-box" style="border-color: var(--accent);">
-          <h3>Group Invites</h3>
-          <p>Instant workspace collaboration</p>
-        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="how-it-works">
+    <div class="container">
+      <h2 class="section-title center-text reveal">How It Works</h2>
+      <div class="steps-grid">
+        <div class="step-card reveal"><div class="step-num">01</div><div class="step-icon"><i class="fas fa-plus-circle"></i></div><h3>Add Your Expenses</h3><p>Quickly log purchases in seconds via voice, receipt scan, or manual entry.</p></div>
+        <div class="step-card reveal"><div class="step-num">02</div><div class="step-icon"><i class="fas fa-folder-open"></i></div><h3>Automatic Categorization</h3><p>Transactions are intelligently organized into smart categories using AI.</p></div>
+        <div class="step-card reveal"><div class="step-num">03</div><div class="step-icon"><i class="fas fa-lightbulb"></i></div><h3>Understand Your Spending</h3><p>Visual dashboards reveal spending trends and provide actionable advice.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <div class="container">
+      <h2 class="section-title center-text reveal">Loved by Smart Budgeters</h2>
+      <div class="testimonial-slider-wrap reveal"><div class="testimonial-slider" id="testimonialSlider"><div class="t-card glass"><div class="t-text">"Walletly helped me finally stick to my monthly budget. The UI is just breath of fresh air."</div><div class="t-user"><strong>Rohan</strong><span>Developer</span></div></div><div class="t-card glass"><div class="t-text">"The insights made me realize how much I spend on food delivery. I've saved ₹5k this month already!"</div><div class="t-user"><strong>Sneha</strong><span>Student</span></div></div><div class="t-card glass"><div class="t-text">"Clean interface and powerful analytics. The best expense tracker I've used in years."</div><div class="t-user"><strong>Arjun</strong><span>Freelancer</span></div></div></div></div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container">
+      <div class="cta-box glass reveal">
+        <h2>Take Control of Your <br>Finances Today</h2>
+        <p>Join thousands of users improving their financial habits with Walletly.</p>
+        <div class="cta-btns"><button class="btn-primary btn-lg" onclick="openAuth('signup')">Create Free Account</button></div>
       </div>
     </div>
   </section>
 
   <div class="theme-toggle-container">
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
-      <svg id="themeIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-      </svg>
-    </button>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle Theme">
+        <svg id="themeIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
   </div>
-
   <!-- Auth Modal -->
-  <div class="modal-overlay" id="authModal">
-    <div class="auth-card">
-      <div
-        style="position: absolute; top: 1.5rem; right: 1.5rem; cursor: pointer; font-size: 1.5rem; color: var(--muted);"
-        onclick="closeAuth()">&times;</div>
-      <h2 id="modalTitle" style="margin-bottom: 0.5rem; font-family: 'Playfair Display', serif;">Welcome to FinBuddy
-      </h2>
-      <p id="modalSub" style="color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem;">The smarter way to manage
-        your wealth.</p>
+<div class="modal-overlay" id="authModal">
+  <div class="auth-card">
+    <div style="position: absolute; top: 1.5rem; right: 1.5rem; cursor: pointer; font-size: 1.5rem; color: var(--muted);" onclick="closeAuth()">&times;</div>
 
-      <!-- Google OAuth Button -->
+    <h2 id="modalTitle">Welcome to FinBuddy</h2>
+    <p id="modalSub">The smarter way to manage your wealth.</p>
+
+    <div id="authFields">
+
+      <!-- ✅ ROLE SELECTION -->
+      <div class="field">
+        <label>Select Role</label>
+        <select id="authRole" onchange="handleRoleChange()" style="width:100%; padding:1rem; border-radius:12px;">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" id="authEmail" placeholder="you@example.com">
+      </div>
+
+      <!-- PASSWORD -->
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="authPass" placeholder="••••••••">
+      </div>
+
+      <!-- LOGIN -->
+      <button class="btn-auth" id="authBtn">Log In</button>
+
+      <!-- OR -->
+      <div class="separator" id="separator">OR</div>
+
+      <!-- GOOGLE -->
       <button class="btn-google" id="googleBtn">
-        <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" width="18" height="18"
-          alt="Google">
+        <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" width="18">
         Continue with Google
       </button>
 
-      <div class="separator">OR</div>
-
-      <div id="authFields">
-        <div class="field">
-          <label>Email Address</label>
-          <input type="email" id="authEmail" placeholder="you@example.com">
-        </div>
-        <div class="field" style="margin-top: 1.5rem;">
-          <label>Password</label>
-          <input type="password" id="authPass" placeholder="••••••••">
-        </div>
-        <button class="btn-auth" id="authBtn">Log In</button>
-        <div style="text-align: center; margin-top: 1.8rem; font-size: 0.95rem; color: var(--muted);" id="authSwitch">
-          New to FinBuddy? <a href="#" onclick="toggleAuth(event)"
-            style="color: var(--accent); text-decoration: none; font-weight: 700;">Create Account</a>
-        </div>
+      <!-- SWITCH -->
+      <div id="authSwitch" style="text-align:center; margin-top:1rem;">
+        New to FinBuddy? 
+        <a href="#" onclick="toggleAuth(event)">Create Account</a>
       </div>
+
     </div>
   </div>
+</div>
 
-  <div id="toast"
-    style="position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 1rem 2.5rem; border-radius: 16px; box-shadow: var(--shadow); transition: 0.5s; z-index: 3000;">
-  </div>
+  <div id="toast" style="position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 1rem 2.5rem; border-radius: 16px; box-shadow: var(--shadow); transition: 0.5s; z-index: 3000;"></div>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -173,7 +462,284 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="js/common.js"></script>
-  <script src="script.js"></script>
-</body>
+  <script>
+    let currentMode = 'login';
+    const authModal = document.getElementById('authModal');
+    const toastEl = document.getElementById('toast');
+    
+    // Ensure Firebase is ready
+    const getFS = () => window.fbFS;
+    const getAuth = () => window.fbAuth;
 
+    function showInsights() {
+        const insights = document.getElementById('websiteInsights');
+        insights.style.display = 'block';
+        window.scrollTo({
+            top: insights.offsetTop - 100,
+            behavior: 'smooth'
+        });
+    }
+
+    // Scroll revealing
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('section').forEach(s => observer.observe(s));
+
+    window.onscroll = () => {
+      const nav = document.getElementById('navbar');
+      if (window.scrollY > 50) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    };
+
+    // Theme Logic
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', targetTheme);
+      localStorage.setItem('wt', targetTheme);
+      updateThemeIcon(targetTheme);
+    }
+
+    function updateThemeIcon(theme) {
+      const icon = document.getElementById('themeIcon');
+      if (theme === 'light') {
+        icon.innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>';
+      } else {
+        icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      }
+    }
+
+    // Initial Theme Set
+    const savedTheme = localStorage.getItem('wt') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    function openAuth(mode) {
+  currentMode = mode;
+  updateAuthUI();
+  authModal.classList.add('open');
+
+  // ✅ IMPORTANT: apply role UI when modal opens
+  handleRoleChange();
+}
+
+    function closeAuth() { authModal.classList.remove('open'); }
+
+    function toggleAuth(e) {
+      e.preventDefault();
+      currentMode = (currentMode === 'login' ? 'signup' : 'login');
+      updateAuthUI();
+    }
+
+    function updateAuthUI() {
+      const title = document.getElementById('modalTitle');
+      const btn = document.getElementById('authBtn');
+      const sw = document.getElementById('authSwitch');
+
+      if (currentMode === 'login') {
+        title.innerText = 'Welcome Back';
+        btn.innerText = 'Log In';
+        sw.innerHTML = 'New to FinBuddy? <a href="#" onclick="toggleAuth(event)" style="color: var(--accent); text-decoration: none; font-weight: 700;">Create Account</a>';
+      } else {
+        title.innerText = 'Create Account';
+        btn.innerText = 'Sign Up Free';
+        sw.innerHTML = 'Already have an account? <a href="#" onclick="toggleAuth(event)" style="color: var(--accent); text-decoration: none; font-weight: 700;">Log In</a>';
+      }
+    }
+
+    function showToast(msg) {
+      toastEl.innerText = msg;
+      toastEl.style.transform = 'translateX(-50%) translateY(0)';
+      setTimeout(() => toastEl.style.transform = 'translateX(-50%) translateY(100px)', 3000);
+    }
+    function handleRoleChange() {
+  const role = document.getElementById('authRole').value;
+
+  const googleBtn = document.getElementById('googleBtn');
+  const authSwitch = document.getElementById('authSwitch');
+  const separator = document.getElementById('separator');
+  const authCard = document.querySelector('.auth-card'); // ⭐ important
+
+  if (role === "admin") {
+    // 👑 Admin UI
+    if (googleBtn) googleBtn.style.display = "none";
+    if (authSwitch) authSwitch.style.display = "none";
+    if (separator) separator.style.display = "none";
+
+    authCard.classList.remove("compact"); // normal spacing
+  } else {
+    // 👤 User UI
+    if (googleBtn) googleBtn.style.display = "flex";
+    if (authSwitch) authSwitch.style.display = "block";
+    if (separator) separator.style.display = "flex";
+
+    authCard.classList.add("compact"); // 🔥 compact mode ON
+  }
+}
+  // Auth Actions
+document.getElementById('authBtn').onclick = function() {
+
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPass').value;
+  const role = document.getElementById('authRole').value; // ✅ NEW
+
+  if (!email || !pass) {
+    showToast('Please fill all fields');
+    return;
+  }
+
+  const btn = this;
+  btn.disabled = true;
+  btn.innerText = 'Processing...';
+
+  // ===============================
+  // 👑 ADMIN LOGIN
+  // ===============================
+  if (role === "admin") {
+
+    // Sign in via Firebase Auth, then verify the user's Firestore `users` doc has role === 'admin'
+    window.fbAuth.signInWithEmailAndPassword(email, pass)
+      .then(res => {
+        return window.fbFS.collection('users').doc(res.user.uid).get();
+      })
+      .then(doc => {
+        if (doc.exists && doc.data().role === 'admin') {
+          showToast("Admin Login Successful 👑");
+          try { sessionStorage.setItem('isAdmin','true'); } catch(e){}
+          window.location.href = "admin-dashboard.html";
+        } else {
+          // not an admin - sign out to clear auth state
+          try { window.fbAuth.signOut(); } catch(e){}
+          showToast("Account is not an admin or role missing ❌");
+          btn.disabled = false;
+          btn.innerText = "Log In";
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerText = "Log In";
+        showToast(err.message || 'Login failed');
+      });
+
+  }
+
+  // ===============================
+  // 👤 USER LOGIN / SIGNUP
+  // ===============================
+  else {
+
+    if (currentMode === 'login') {
+
+      window.fbAuth.signInWithEmailAndPassword(email, pass)
+        .then(res => {
+          showToast('Success! 👋');
+          checkUserAndRedirect(res.user);
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerText = 'Log In';
+          showToast(err.message);
+        });
+
+    } else {
+
+      window.fbAuth.createUserWithEmailAndPassword(email, pass)
+        .then(res => {
+          window.fbFS.collection('users').doc(res.user.uid).set({
+            email: res.user.email,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          }).then(() => {
+            showToast('Welcome to FinBuddy! 🎉');
+            window.location.href = 'setup.html';
+          });
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerText = 'Sign Up Free';
+          showToast(err.message);
+        });
+
+    }
+
+  }
+};
+
+    // Google Sign-In
+    document.getElementById('googleBtn').onclick = function() {
+      // Robust Check for Firebase components
+      const auth = window.fbAuth || (window.firebase && firebase.auth());
+      const fs = window.fbFS || (window.firebase && firebase.firestore());
+      
+      if (!auth) {
+        showToast('Authentication system initializing...');
+        return;
+      }
+      
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        const user = result.user;
+        
+        if (!fs) {
+          showToast('Database connection failed');
+          return;
+        }
+        
+        fs.collection('users').doc(user.uid).get().then(doc => {
+          if (!doc.exists) {
+            fs.collection('users').doc(user.uid).set({
+              email: user.email,
+              name: user.displayName,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+              window.location.href = 'setup.html';
+            });
+          } else {
+            checkUserAndRedirect(user);
+          }
+        });
+      }).catch(err => {
+        console.error("Google Auth Error:", err);
+        showToast(err.message);
+      });
+    };
+
+    function checkUserAndRedirect(user) {
+      if (!user) return;
+      console.log("Checking redirect for user:", user.uid);
+      
+      const fs = window.fbFS || (window.firebase && firebase.firestore());
+      if (!fs) {
+          console.warn("Firestore not ready, retrying...");
+          setTimeout(() => checkUserAndRedirect(user), 200);
+          return;
+      }
+      
+      fs.collection('users').doc(user.uid).get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          console.log("User data found:", data);
+          if (data.budget || data.groupId) {
+            console.log("Redirecting to dashboard");
+            window.location.href = 'dashboard.html';
+          } else {
+            console.log("No budget/group, redirecting to setup");
+            window.location.href = 'setup.html';
+          }
+        } else {
+          console.log("No user document, redirecting to setup");
+          window.location.href = 'setup.html';
+        }
+      }).catch(err => {
+        console.error("Redirect Error:", err);
+        showToast("Error checking user status");
+      });
+    }
+
+    window.fbAuth.onAuthStateChanged(user => { if (user) checkUserAndRedirect(user); });
+  </script>
+</body>
 </html>
