@@ -11,52 +11,8 @@
   <link rel="stylesheet" href="css/dashboard.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    /* ── Tab system ── */
-    .tab-nav {
-      display: flex;
-      gap: 4px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 4px;
-      width: 100%;
-      justify-content: space-between;
-      margin-bottom: 1.25rem;
-    }
-
-    .tab-btn {
-      flex: 1;
-      text-align: center;
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-family: 'Sora', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 500;
-      padding: 0.45rem 1.1rem;
-      border-radius: 9px;
-      cursor: pointer;
-      transition: 0.2s;
-      white-space: nowrap;
-    }
-
-    .tab-btn.active {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .tab-btn:hover:not(.active) {
-      color: var(--text);
-      background: var(--card2);
-    }
-
-    .tab-pane {
-      display: none;
-    }
-
-    .tab-pane.active {
-      display: block;
-    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
 
     /* ── Group badge ── */
     .group-badge {
@@ -170,129 +126,410 @@
       color: var(--accent);
     }
 
+    .cat-amt {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── Insights card specific styles ── */
+    #insightsBody {
+      min-height: 80px;
+    }
+
+    .insight-text {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: var(--text);
+      border-left: 3px solid var(--accent);
+      padding-left: 1rem;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .insight-text strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .insight-placeholder .pulse-line {
+      height: 14px;
+      background: var(--card2);
+      margin-bottom: 8px;
+      border-radius: 4px;
+      animation: pulse 1.5s infinite;
+    }
+
+    .insight-loading-text {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 0.8; }
+      100% { opacity: 0.5; }
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: 0.2s;
+    }
+
+    .btn-icon:hover {
+      opacity: 1;
+      transform: rotate(45deg);
+    }
+
     /* ── Chatbot ── */
     .chatbot-wrap {
       position: fixed;
-      bottom: 5.5rem;
-      right: 1.5rem;
-      width: 310px;
+      bottom: 6rem;
+      right: 2rem;
+      width: 380px;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg, 0 15px 50px rgba(0,0,0,0.2));
       z-index: 400;
       display: none;
       flex-direction: column;
       overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+      transform: translateY(30px);
+      opacity: 0;
+      pointer-events: none;
     }
 
     .chatbot-wrap.show {
       display: flex;
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .chat-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: .85rem 1.1rem;
+      padding: 1.1rem 1.4rem;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff;
-      font-size: .88rem;
-      font-weight: 600;
+      font-size: 1rem;
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
 
     .chat-header button {
-      background: none;
+      background: rgba(255, 255, 255, 0.15);
       border: none;
       color: #fff;
       cursor: pointer;
-      font-size: 1rem;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      transition: 0.2s;
+    }
+
+    .chat-header button:hover {
+      background: rgba(255, 255, 255, 0.25);
     }
 
     .chat-body {
       flex: 1;
       overflow-y: auto;
-      padding: 1rem;
-      min-height: 180px;
-      max-height: 280px;
+      padding: 1.25rem;
+      min-height: 350px;
+      max-height: 480px;
       display: flex;
       flex-direction: column;
-      gap: .5rem;
+      gap: 1rem;
+      background: var(--bg);
+      scroll-behavior: smooth;
     }
 
     .msg {
-      padding: .55rem .85rem;
-      border-radius: 12px;
-      font-size: .82rem;
-      max-width: 85%;
-      line-height: 1.45;
+      padding: 0.75rem 1.1rem;
+      border-radius: 16px;
+      font-size: 0.88rem;
+      max-width: 88%;
+      line-height: 1.6;
+      position: relative;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+      animation: msgPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes msgPop {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .msg.bot {
-      background: var(--card2);
+      background: var(--card);
       color: var(--text);
       align-self: flex-start;
-      border-radius: 4px 12px 12px 12px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
     }
 
     .msg.user {
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff;
       align-self: flex-end;
-      border-radius: 12px 4px 12px 12px;
+      border-bottom-right-radius: 4px;
     }
 
     .chat-footer {
       display: flex;
-      gap: .5rem;
-      padding: .75rem;
+      gap: 0.75rem;
+      padding: 1.1rem;
       border-top: 1px solid var(--border);
+      background: var(--card);
     }
 
     .chat-footer input {
       flex: 1;
       background: var(--card2);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 12px;
       color: var(--text);
       font-family: 'Sora', sans-serif;
-      font-size: .82rem;
-      padding: .5rem .75rem;
+      font-size: 0.9rem;
+      padding: 0.75rem 1rem;
       outline: none;
+      transition: 0.3s;
     }
 
     .chat-footer input:focus {
       border-color: var(--accent);
+      background: var(--card);
+      box-shadow: 0 0 0 3px rgba(91, 124, 250, 0.1);
     }
 
     .chat-footer button {
       background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 8px;
-      padding: 0 .9rem;
+      border-radius: 12px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 1.1rem;
+      transition: 0.3s;
+    }
+
+    .chat-footer button:hover {
+      transform: scale(1.05);
+      background: var(--accent-hover, var(--accent));
     }
 
     .chat-toggle {
       position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
-      width: 48px;
-      height: 48px;
+      bottom: 2rem;
+      right: 2rem;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #fff;
       border: none;
       cursor: pointer;
-      font-size: 1.3rem;
-      box-shadow: 0 6px 20px rgba(91, 124, 250, .45);
+      font-size: 1.6rem;
+      box-shadow: 0 10px 30px rgba(91, 124, 250, 0.45);
       z-index: 400;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
+
+    .chat-toggle:hover {
+      transform: scale(1.15) rotate(10deg);
+      box-shadow: 0 15px 40px rgba(91, 124, 250, 0.6);
+    }
+    /* ── Notifications Dropdown ── */
+    .notif-wrapper {
+      position: relative;
+    }
+
+    .notif-btn {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: 0.2s;
+    }
+
+    .notif-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      padding: 0 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--card);
+    }
+
+    .notif-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 320px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-top: 12px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+      padding: 0;
+      z-index: 500;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(10px);
+      transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+      opacity: 0;
+    }
+
+    .notif-dropdown.show {
+      display: flex;
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .notif-header {
+      padding: 1.1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      font-weight: 700;
+      background: var(--card);
+    }
+
+    .notif-body {
+      max-height: 350px;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .notif-item {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: 0.2s;
+    }
+
+    .notif-item:hover {
+      background: var(--card);
+    }
+
+    .notif-item .notif-text {
+      font-size: 0.82rem;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .notif-item .notif-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .notif-item button {
+      flex: 1;
+      font-size: 0.75rem;
+      padding: 0.4rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .notif-btn-accept {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+    }
+
+    .notif-btn-decline {
+      background: var(--card2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .notif-btn-accept:hover { background: var(--accent2); }
+    .notif-btn-decline:hover { border-color: var(--danger); color: var(--danger); }
+
+    .notif-empty {
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .alert-banner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: rgba(248, 113, 113, 0.95);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 1.5rem 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      z-index: 1000;
+      text-align: center;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .alert-banner.show {
+      display: flex;
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .alert-banner h3 { font-size: 1.2rem; margin: 0; font-weight: 800; }
+    .alert-banner p { font-size: 0.9rem; margin: 0; opacity: 0.9; }
   </style>
 </head>
 
@@ -347,7 +584,7 @@
       </div>
       <div class="topbar-right">
         <div class="notif-wrapper">
-          <button class="notif-btn" id="notifBtn" onclick="window.location.href='groups.html'" title="Notifications">
+          <button class="notif-btn" id="notifBtn" onclick="toggleNotifs()" title="Notifications">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -355,6 +592,13 @@
             </svg>
             <span class="notif-badge" id="notifBadge" style="display:none">0</span>
           </button>
+          
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">Notifications</div>
+            <div class="notif-body" id="notifBody">
+              <div class="notif-empty">No new notifications</div>
+            </div>
+          </div>
         </div>
         <button class="add-btn" onclick="openModal()">+ <span>Add Expense</span></button>
       </div>
@@ -444,8 +688,23 @@
             
           </div>
 
-          <!-- Right Column: Pie Chart -->
+          <!-- Right Column: Pie Chart & Insights -->
           <div style="display:flex;flex-direction:column;gap:1.5rem">
+            
+            <div class="card" id="insightsCard">
+              <div class="section-header">
+                <h2>Smart Insights</h2>
+                <button class="btn-icon" onclick="refreshInsights()" title="Refresh AI Insights">🔄</button>
+              </div>
+              <div id="insightsBody">
+                <div class="insight-placeholder">
+                  <div class="pulse-line"></div>
+                  <div class="pulse-line"></div>
+                </div>
+                <p class="insight-loading-text">Analyzing your financial behavior...</p>
+              </div>
+            </div>
+
             <div class="card overview-chart-card">
               <div class="section-header"><h2>Spending by Category</h2></div>
               <div class="mini-chart-wrap"><canvas id="donutChart"></canvas></div>
@@ -586,12 +845,34 @@
 
   <div class="toast" id="toast"></div>
 
+  <div class="alert-banner" id="alertBanner">
+    <h3>⚠️ BUDGET ALERT</h3>
+    <p>You have used over 90% of your budget.</p>
+  </div>
+
+  <!-- Chatbot UI -->
+  <div class="chatbot-wrap" id="chatbotWrap">
+    <div class="chat-header">
+      <span>FinBuddy AI Assistant</span>
+      <button onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="msg bot">Hello! I'm your FinBuddy. How can I help you today?</div>
+    </div>
+    <div class="chat-footer">
+      <input type="text" id="chatInput" placeholder="Ask anything..." onkeydown="if(event.key==='Enter') sendChat()">
+      <button onclick="sendChat()">➤</button>
+    </div>
+  </div>
+  <button class="chat-toggle" onclick="toggleChat()">💬</button>
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <script src="js/common.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/ai-features.js"></script>
