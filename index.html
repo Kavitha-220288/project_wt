@@ -104,14 +104,14 @@
     .hero-visual { flex: 1; opacity: 0; transform: scale(0.9); animation: zoomIn 1s 0.3s forwards; }
 
     .hero-content h1 {
-      font-family: 'Playfair Display', serif; font-size: 4.8rem; line-height: 1.05;
+      font-family: 'Playfair Display', serif; font-size: 3.5rem; line-height: 1.05;
       margin-bottom: 2rem; background: linear-gradient(135deg, var(--text) 0%, #94a3b8 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .hero-content h1 span { color: var(--accent); -webkit-text-fill-color: var(--accent); font-style: italic; }
-    .hero-content p { font-size: 1.35rem; color: var(--muted); margin-bottom: 3.5rem; max-width: 600px; }
+    .hero-content p { font-size: 1.15rem; color: var(--muted); margin-bottom: 3.5rem; max-width: 600px; }
 
     /* Explore Button Enhancement */
     .btn-explore {
@@ -218,7 +218,7 @@
 
     @media (max-width: 1024px) {
       .hero { padding: 10rem 2rem 4rem; }
-      .hero-content h1 { font-size: 3.5rem; }
+      .hero-content h1 { font-size: 2.8rem; }
       nav { padding: 1rem 2rem; }
     }
     /* 🔥 Compact Mode for User */
@@ -245,6 +245,14 @@
   padding: 0.7rem !important;
   font-size: 0.85rem;
 }
+/* Ensure dark/light mode affects landing elements correctly */
+.glass, .feature-card, .cta-box, .step-card .step-icon {
+  background: var(--card) !important;
+  border-color: var(--card-border) !important;
+  color: var(--text) !important;
+}
+h1, h2, h3, h4 { color: var(--text) !important; }
+p, .t-text, .section-desc, .check-list li { color: var(--muted) !important; }
   </style>
 </head>
 
@@ -265,70 +273,15 @@
   <section id="home" class="hero">
     <div class="container">
       <div class="hero-content">
-        <h1 class="reveal">Know Where Your <br><span class="text-gradient">Money Goes</span></h1>
+        <h1 class="reveal">Know Where Your <br><span class="text-gradient" style="background: none; -webkit-text-fill-color: var(--accent); color: var(--accent);">Money Goes</span></h1>
         <p class="hero-subtext reveal">Walletly helps you track expenses, understand spending habits, and build better financial discipline with clear insights.</p>
         <div class="hero-actions reveal">
           <button class="btn-primary btn-lg" onclick="openAuth('signup')">Start Free</button>
-          <a href="#demo" class="btn-outline btn-lg"><i class="fas fa-play"></i> See Demo</a>
+          <button class="btn-outline btn-lg" onclick="document.getElementById('videoModal').classList.add('open')"><i class="fas fa-play"></i> See Demo</button>
         </div>
       </div>
       <div class="hero-visual reveal">
-        <div class="glass-card card-pizza floating" style="--d: 0s">
-            <div class="card-header"><span>🍕 Food</span><span>₹ 4,200</span></div>
-            <div class="progress-bar"><div class="fill" style="width:70%"></div></div>
-        </div>
-        <div class="glass-card card-chart floating" style="--d: 0.5s">
-            <canvas id="heroMiniChart"></canvas>
-        </div>
-        <div class="glass-card card-stat floating" style="--d: 1s">
-            <div class="stat-label">Total Spent</div>
-            <div class="stat-val">₹ 14,350</div>
-        </div>
-        <div class="float-icon icon-1">💳</div>
-        <div class="float-icon icon-2">💰</div>
-        <div class="float-icon icon-3">🧾</div>
-        <div class="float-icon icon-4">📊</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="story-section problem">
-    <div class="container center-text">
-      <div class="story-card glass reveal">
-        <h2 class="section-title">Small Expenses Add Up Quickly</h2>
-        <p class="section-desc">Daily purchases like coffee, subscriptions, and impulse shopping slowly drain your budget without you noticing.</p>
-        <div class="problem-icons">
-          <div class="p-icon"><i class="fas fa-coffee"></i><span>Coffee</span></div>
-          <div class="p-icon"><i class="fas fa-film"></i><span>Netflix</span></div>
-          <div class="p-icon"><i class="fas fa-shopping-bag"></i><span>Amazon</span></div>
-          <div class="p-icon"><i class="fas fa-hamburger"></i><span>Zomato</span></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="story-section solution" id="demo">
-    <div class="container">
-      <div class="solution-grid">
-        <div class="solution-text">
-          <h2 class="reveal">Meet <span class="text-gradient">Walletly</span></h2>
-          <p class="reveal">Walletly automatically organizes your spending so you can clearly see where your money goes. Every rupee accounted for, in real-time.</p>
-        </div>
-        <div class="solution-visual reveal">
-          <div class="mockup-window glass">
-            <div class="mock-header">
-              <div class="dots"><span></span><span></span><span></span></div>
-              <span>walletly.app/dashboard</span>
-            </div>
-            <div class="mock-body">
-              <div class="mock-sidebar"></div>
-              <div class="mock-main">
-                <div class="mock-stats"><div class="m-box"></div><div class="m-box"></div></div>
-                <div class="mock-chart"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <img src="assets/dashboard-mockup.png" class="hero-img" alt="FinBuddy Dashboard Mockup" style="width: 100%; max-width: 600px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
       </div>
     </div>
   </section>
@@ -340,27 +293,12 @@
         <p class="reveal">Built for modern budgeters who value speed and intelligence.</p>
       </div>
       <div class="features-grid">
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-magic"></i></div><h3>Smart Expense Tracking</h3><p>Automatically record and categorize expenses with mercury-precise accuracy.</p></div>
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-bullseye"></i></div><h3>Budget Planning</h3><p>Set monthly spending limits and track progress against your goals in real-time.</p></div>
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-robot"></i></div><h3>AI Insights</h3><p>Understand spending patterns and receive personalized financial trends analysis.</p></div>
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-chart-pie"></i></div><h3>Visual Reports</h3><p>Interactive graphs and charts for deeper analysis of your financial health.</p></div>
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-sync"></i></div><h3>Secure Cloud Sync</h3><p>Access your financial data anywhere, anytime, with end-to-end encryption.</p></div>
-        <div class="feature-card glass reveal"><div class="f-icon"><i class="fas fa-bell"></i></div><h3>Budget Alerts</h3><p>Receive instant notifications when nearing your custom spending limits.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="insights" class="insights">
-    <div class="container">
-      <div class="insights-container glass reveal">
-        <div class="insights-grid">
-          <div class="insights-text">
-            <h2>Turn Spending Data Into <br><span class="text-gradient">Clear Insights</span></h2>
-            <p>Walletly transforms raw expense data into visual reports so you can easily understand your financial habits and make better decisions.</p>
-            <ul class="check-list"><li><i class="fas fa-check-circle"></i> Weekly Trend Analysis</li><li><i class="fas fa-check-circle"></i> Category-wise Breakdown</li><li><i class="fas fa-check-circle"></i> AI Savings Potential Audit</li></ul>
-          </div>
-          <div class="insights-viz"><canvas id="insightsChart"></canvas></div>
-        </div>
+        <div class="feature-card glass reveal"><div class="f-icon">🎙️</div><h3>Voice Tracking</h3><p>Automatically record and categorize expenses with intuitive voice commands.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon">📸</div><h3>Receipt Scanning</h3><p>Transform paper receipts into digital records with built-in OCR.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon">🤖</div><h3>AI Assistant</h3><p>Ask our intelligent bot about your spending habits and budget status.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon">👨‍👩‍👧‍👦</div><h3>Family Groups</h3><p>Collaborate on shared workspaces and manage collective expenses.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon">☁️</div><h3>Secure Cloud Sync</h3><p>Access your financial data anywhere, anytime, securely.</p></div>
+        <div class="feature-card glass reveal"><div class="f-icon">🔔</div><h3>Budget Alerts</h3><p>Receive instant notifications when nearing your custom spending limits.</p></div>
       </div>
     </div>
   </section>
@@ -373,13 +311,6 @@
         <div class="step-card reveal"><div class="step-num">02</div><div class="step-icon"><i class="fas fa-folder-open"></i></div><h3>Automatic Categorization</h3><p>Transactions are intelligently organized into smart categories using AI.</p></div>
         <div class="step-card reveal"><div class="step-num">03</div><div class="step-icon"><i class="fas fa-lightbulb"></i></div><h3>Understand Your Spending</h3><p>Visual dashboards reveal spending trends and provide actionable advice.</p></div>
       </div>
-    </div>
-  </section>
-
-  <section class="testimonials">
-    <div class="container">
-      <h2 class="section-title center-text reveal">Loved by Smart Budgeters</h2>
-      <div class="testimonial-slider-wrap reveal"><div class="testimonial-slider" id="testimonialSlider"><div class="t-card glass"><div class="t-text">"Walletly helped me finally stick to my monthly budget. The UI is just breath of fresh air."</div><div class="t-user"><strong>Rohan</strong><span>Developer</span></div></div><div class="t-card glass"><div class="t-text">"The insights made me realize how much I spend on food delivery. I've saved ₹5k this month already!"</div><div class="t-user"><strong>Sneha</strong><span>Student</span></div></div><div class="t-card glass"><div class="t-text">"Clean interface and powerful analytics. The best expense tracker I've used in years."</div><div class="t-user"><strong>Arjun</strong><span>Freelancer</span></div></div></div></div>
     </div>
   </section>
 
@@ -400,6 +331,45 @@
         </svg>
       </button>
   </div>
+  <footer style="padding: 4rem 10%; border-top: 1px solid var(--card-border); margin-top: 4rem;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2rem; margin-bottom: 2rem;">
+      <div style="flex: 1; min-width: 250px;">
+        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <div style="width: 30px; height: 30px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">📈</div>
+          FinBuddy
+        </div>
+        <p style="color: var(--muted); font-size: 0.95rem; max-width: 300px;">Empowering your financial journey with intelligent insights and seamless expense tracking. Take control of your money today.</p>
+      </div>
+      <div style="display: flex; gap: 4rem; flex-wrap: wrap;">
+        <div>
+          <h4 style="color: var(--text); margin-bottom: 1rem;">Product</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="#features" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Features</a>
+            <a href="#how" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">How It Works</a>
+            <a href="#" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">FAQ</a>
+          </div>
+        </div>
+        <div>
+          <h4 style="color: var(--text); margin-bottom: 1rem;">Company</h4>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="#" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">About Us</a>
+            <a href="#" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Privacy Policy</a>
+            <a href="#" style="color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="border-top: 1px solid var(--card-border); padding-top: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <p style="color: var(--muted); font-size: 0.9rem;">&copy; 2026 FinBuddy. All rights reserved.</p>
+      <div style="display: flex; gap: 1.5rem;">
+        <a href="#" style="color: var(--muted); font-size: 1.2rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'"><i class="fab fa-twitter"></i></a>
+        <a href="#" style="color: var(--muted); font-size: 1.2rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'"><i class="fab fa-github"></i></a>
+        <a href="#" style="color: var(--muted); font-size: 1.2rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'"><i class="fab fa-linkedin"></i></a>
+        <a href="#" style="color: var(--muted); font-size: 1.2rem; transition: color 0.3s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'"><i class="fab fa-instagram"></i></a>
+      </div>
+    </div>
+  </footer>
+
   <!-- Auth Modal -->
 <div class="modal-overlay" id="authModal">
   <div class="auth-card">
@@ -449,6 +419,19 @@
         <a href="#" onclick="toggleAuth(event)">Create Account</a>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Video Demo Modal -->
+<div class="modal-overlay" id="videoModal">
+  <div class="auth-card" style="max-width: 800px; padding: 1rem;">
+    <div style="position: absolute; top: -2rem; right: 0; cursor: pointer; font-size: 2rem; color: #fff;" onclick="closeDemo()">&times;</div>
+    <div style="text-align: center; padding: 4rem 2rem;">
+      <i class="fas fa-play-circle" style="font-size: 4rem; color: var(--accent); margin-bottom: 1rem;"></i>
+      <h2 style="margin-bottom: 1rem;">Demo Video</h2>
+      <p style="color: var(--muted);">This is a placeholder for the instructional video on how FinBuddy works. Replace the iframe with your actual video source!</p>
+      <!-- Example iframe: <iframe width="100%" height="400" src="YOUR_YOUTUBE_LINK" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> -->
     </div>
   </div>
 </div>
@@ -528,6 +511,7 @@
 }
 
     function closeAuth() { authModal.classList.remove('open'); }
+    function closeDemo() { document.getElementById('videoModal').classList.remove('open'); }
 
     function toggleAuth(e) {
       e.preventDefault();
