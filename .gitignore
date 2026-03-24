@@ -1,9 +1,21 @@
+# Node dependencies
 node_modules/
-/functions/node_modules/
+**/node_modules/
+
+# Environment secrets
 .env
-.DS_Store
-dist/
-build/
-.vscode/
+**/.env
+.env.local
+**/.env.local
+
+# Firebase Service Account Keys
+*.json
+!package.json
+!package-lock.json
+
+# IDE / Logs
 *.log
-.firebase/
+**/*.log
+.vscode/
+.idea/
+.DS_Store

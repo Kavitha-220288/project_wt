@@ -1,7 +1,4 @@
-// js/settings.js
 var gUser, gData;
-
-window.initTheme();
 
 // Sync theme toggle checkbox with current theme
 function syncThemeToggle() {
@@ -38,12 +35,21 @@ window.requireAuth(function(user, data) {
   document.getElementById('currentBudget').textContent = (data.symbol||'₹') + Number(data.budget||0).toLocaleString('en-IN');
 
   // Load expenses for stats
-  const path = data.groupId ? 'groups/' + data.groupId + '/expenses' : 'users/' + user.uid + '/expenses';
-  fbFS.collection(path).get().then(function(snap) {
-    var exps = [];
-    snap.forEach(function(doc){ exps.push(doc.data()); });
-    var total = exps.reduce(function(s,e){return s+Number(e.amount);},0);
-    document.getElementById('totalExpenses').textContent = exps.length + ' transactions';
+  let query = fbFS.collection('expenses');
+  if (data.groupId) {
+    query = query.where('groupId', '==', data.groupId);
+  } else {
+    query = query.where('createdBy', '==', user.uid);
+  }
+
+  query.get().then(function(snap) {
+    var total = 0;
+    var count = 0;
+    snap.forEach(function(doc){ 
+      total += Number(doc.data().amount || 0);
+      count++;
+    });
+    document.getElementById('totalExpenses').textContent = count + ' transactions';
     document.getElementById('totalSpent').textContent    = (data.symbol||'₹') + total.toLocaleString('en-IN');
   });
 });
@@ -76,15 +82,25 @@ window.saveBudget = function() {
   Promise.all([p1, p2]).then(function() {
     gData.budget = budget; gData.currency = currency; gData.symbol = symbol;
     document.getElementById('currentBudget').textContent = symbol + budget.toLocaleString('en-IN');
-    showToast('Budget updated ✓','success');
+    
+    // 🔥 Sync with dashboard state immediately if we were on the same tab
+    if (window.gUserDoc) window.gUserDoc.budget = budget;
+    
+    showToast('Budget updated ✓', 'success');
   }).catch(function(e){ showToast('Error: '+e.message,'error'); });
 };
 
 window.clearExpenses = function() {
   if (!confirm('Are you sure? This will permanently delete ALL your expense records and cannot be undone.')) return;
-  const path = gData.groupId ? 'groups/' + gData.groupId + '/expenses' : 'users/' + gUser.uid + '/expenses';
   
-  fbFS.collection(path).get().then(function(snap) {
+  let query = fbFS.collection('expenses');
+  if (gData.groupId) {
+    query = query.where('groupId', '==', gData.groupId);
+  } else {
+    query = query.where('createdBy', '==', gUser.uid);
+  }
+
+  query.get().then(function(snap) {
     const batch = fbFS.batch();
     snap.forEach(doc => batch.delete(doc.ref));
     return batch.commit();

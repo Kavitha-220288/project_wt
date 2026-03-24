@@ -3,10 +3,82 @@
 
 var gUser = null;
 var gData = {};
-var gExpenses   = [];   // expenses visible to current user
-var gMyExpenses = [];   // only added by current user
+var gUserDoc = {}; // Original user data
+var gGroupDoc = {}; // Original group data
+var gExpenses   = [];   
+var gMyExpenses = [];   
 var gChart = null;
 var gEditId = null;
+var gDashboardInit = false; 
+var gListener = null; // Store the current listener reference
+
+var gViewMode = localStorage.getItem('viewMode') || 'personal'; 
+
+window.toggleViewMode = function() {
+  if (!gUserDoc || !gUserDoc.groupId) {
+    showToast('Join a group first!', 'info');
+    return;
+  }
+  
+  window.gViewMode = (window.gViewMode === 'personal' ? 'group' : 'personal');
+  gViewMode = window.gViewMode;
+  localStorage.setItem('viewMode', window.gViewMode);
+  showToast('Showing ' + window.gViewMode + ' dashboard', 'info');
+  
+  // Ensure we update global data and labels
+  if (typeof syncDashboardData === 'function') {
+    syncDashboardData();
+  } else {
+    updateModeUI();
+    renderOverview();
+  }
+
+  // Relistens to expenses with the new filter
+  loadExpenses();
+  // Automatically switch back to Overview for a smoother transition
+  switchTab('overview');
+};
+
+window.toggleProfileMenu = function(e, forceClose) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  const menu = document.getElementById('profileMenu');
+  if (!menu) return;
+  if (forceClose) {
+    menu.classList.remove('show');
+  } else {
+    menu.classList.toggle('show');
+  }
+};
+
+function updateModeUI() {
+  const badge = document.getElementById('viewModeBadge');
+  const toggle = document.getElementById('modeToggle');
+  const label = document.getElementById('modeLabel');
+  const dot = document.getElementById('modeDot');
+  
+  if (badge) {
+    badge.textContent = gViewMode;
+    badge.className = 'page-mode-badge ' + gViewMode;
+  }
+  if (toggle) {
+    toggle.style.display = (gUserDoc && gUserDoc.groupId) ? 'flex' : 'none';
+  }
+  if (label) {
+    label.textContent = gViewMode === 'personal' ? 'Switch to Group' : 'Switch to Personal';
+  }
+  if (dot) {
+    dot.className = 'mode-indicator ' + gViewMode;
+  }
+
+  // 👤 Ensure Sidebar Updates to reflect current Context (Group vs Personal)
+  if (gData && gUser) {
+    const un = document.getElementById('userName');
+    const av = document.getElementById('userAvatar');
+    const name = gData.name || gUser.email;
+    if (un) un.textContent = name;
+    if (av) av.textContent = (name || 'U').charAt(0).toUpperCase();
+  }
+}
 
 // ─── Tab System ──────────────────────────────────────────────────────────────
 window.switchTab = function (tabId) {
@@ -22,7 +94,56 @@ window.switchTab = function (tabId) {
   if (tabId === 'overview')     renderOverview();
   if (tabId === 'all-expenses') renderAllExpenses();
   if (tabId === 'my-expenses')  renderMyExpenses();
+  if (tabId === 'profile')      renderProfile();
+
+  // 🧹 Ensure Sidebar Profile Menu closes whenever we switch tabs
+  window.toggleProfileMenu(null, true);
 };
+
+window.toggleGroupSync = function(checkbox) {
+  if (!gUser) return;
+  const isEnabled = checkbox.checked;
+  window.fbFS.collection('users').doc(gUser.uid).update({
+    syncToGroup: isEnabled
+  }).then(() => {
+    showToast('Group sync ' + (isEnabled ? 'enabled' : 'disabled'), 'info');
+  }).catch(e => showToast(e.message, 'error'));
+};
+
+function renderProfile() {
+  if (!gUser || !gData) return;
+  
+  setTxt('profName',   gUserDoc.name || 'User');
+  setTxt('profEmail',  gUser.email);
+  setTxt('profBudget', (gData.symbol || '₹') + fmt(gData.budget || 0));
+
+  const syncToggle = document.getElementById('syncToGroupToggle');
+  if (syncToggle) {
+    syncToggle.checked = !!gUserDoc.syncToGroup;
+  }
+  
+  const av = document.getElementById('profAvatar');
+  if (av) av.textContent = (gUserDoc.name || gUser.email || 'U').charAt(0).toUpperCase();
+
+  const modeBadge = document.getElementById('profMode');
+  if (modeBadge) {
+    modeBadge.textContent = gViewMode.charAt(0).toUpperCase() + gViewMode.slice(1);
+    modeBadge.className = 'page-mode-badge ' + gViewMode;
+  }
+  
+  const switchBtn = document.getElementById('profSwitchBtn');
+  if (switchBtn) {
+    switchBtn.style.display = (gUserDoc && gUserDoc.groupId) ? 'inline-block' : 'none';
+    switchBtn.textContent = gViewMode === 'personal' ? 'Switch to Group' : 'Switch to Personal';
+  }
+
+  // 🎯 Ensure Sidebar also reflects current user context
+  const name = gUserDoc.name || gUser.email;
+  const un = document.getElementById('userName');
+  const uav = document.getElementById('userAvatar');
+  if (un) un.textContent = name;
+  if (uav) uav.textContent = name.charAt(0).toUpperCase();
+}
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
 window.deleteExpense = function (id) {
@@ -104,9 +225,9 @@ window.saveExpense = function () {
     note:        note,
     createdBy:   gUser.uid,
     userEmail:   gUser.email || '',
-    addedByName: (gData.name) ? gData.name : (gUser.email || '').split('@')[0],
-    groupId:     gData.groupId || null,
-    groupName:   gData.groupName || null,
+    addedByName: gUserDoc.name || (gUser.email || '').split('@')[0],
+    groupId:     (gViewMode === 'group') ? (gData.id || null) : null,
+    groupName:   (gViewMode === 'group') ? (gData.name || null) : null,
     createdAt:   firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -116,7 +237,11 @@ window.saveExpense = function () {
     delete payload.createdAt;
     payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     col.doc(gEditId).update(payload)
-      .then(function () { showToast('Updated ✓', 'success'); window.closeModal(); })
+      .then(function () { 
+        window.closeModal(); 
+        showToast('Updated ✓', 'success'); 
+        if(window.triggerBurst) window.triggerBurst(); 
+      })
       .catch(function (e) {
         showToast(e.message, 'error');
         if (btn) { btn.disabled = false; btn.textContent = 'Update Expense'; }
@@ -124,9 +249,18 @@ window.saveExpense = function () {
   } else {
     col.add(payload)
       .then(function (ref) {
-        console.log('Expense saved. ID:', ref.id, ' UID:', gUser.uid);
-        showToast('Expense added ✓', 'success');
         window.closeModal();
+        showToast('Expense added ✓', 'success');
+        if(window.triggerBurst) window.triggerBurst();
+        
+        // 🔔 Add Activity Notification
+        window.fbFS.collection('notifications').add({
+          userId: gUser.uid,
+          title: 'Expense Added 🧾',
+          message: `Recorded ₹${payload.amount} for ${payload.title}.`,
+          type: 'expense',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
       })
       .catch(function (e) {
         console.error('Save error:', e);
@@ -137,106 +271,156 @@ window.saveExpense = function () {
 };
 
 // ─── Auth Entry Point ─────────────────────────────────────────────────────────
+// ─── Auth Entry Point (Atomically managed state) ─────────────────────────────
+var gGroupListener = null;
+var gIsDashboardActive = false;
+
 window.requireAuth(async function (user, data) {
   gUser = user;
-  gData = data || {};
+  gUserDoc = data;
 
-  console.log('[Dashboard] Auth OK. UID:', gUser.uid, 'gData:', JSON.stringify(gData));
+  // 🛡️ IDEMPOTENCY: Only run heavy initialization ONCE on load.
+  if (gIsDashboardActive) {
+     const syncFn = window.syncDashboardData; // Reference the existing sync logic
+     if (typeof syncFn === 'function') syncFn();
+     return;
+  }
+  gIsDashboardActive = true;
 
-  // Pull fresh user doc so we have latest budget / groupId
-  try {
-    var uSnap = await window.fbFS.collection('users').doc(gUser.uid).get();
-    if (uSnap.exists) {
-      gData = Object.assign({}, gData, uSnap.data());
-    }
-    // If user is in a group, pull group budget
-    if (gData.groupId) {
-      var gSnap = await window.fbFS.collection('groups').doc(gData.groupId).get();
-      if (gSnap.exists) {
-        var gd = gSnap.data();
-        if (gd.budget)    gData.budget    = Number(gd.budget);
-        if (gd.symbol)    gData.symbol    = gd.symbol;
-        if (gd.name)      gData.groupName = gd.name;
-        var gl = document.getElementById('groupNameLabel');
-        if (gl) { gl.textContent = '👨‍👩‍👧‍👦 ' + (gd.name || 'Group'); gl.style.display = 'inline-flex'; }
+  // Initialize View Mode logic once
+  window.gViewMode = localStorage.getItem('viewMode') || 'personal';
+  if (window.gViewMode === 'group' && !gUserDoc.groupId) {
+    window.gViewMode = 'personal';
+    localStorage.setItem('viewMode', 'personal');
+  }
+  gViewMode = window.gViewMode;
+
+  // Define Sync Function
+  const syncDashboardData = () => {
+    // 🛡️ DATA INTEGRITY CHECK: 
+    // If we are in group mode, we MUST show group data or "Loading", NOT personal data.
+    if (gViewMode === 'group') {
+      if (gGroupDoc && gGroupDoc.name) {
+        gData = { ...gGroupDoc, type: 'group' };
+        const gl = document.getElementById('groupNameLabel');
+        if (gl) { 
+          gl.textContent = '👨‍👩‍👧‍👦 ' + (gData.name || 'Group'); 
+          gl.style.display = 'inline-flex'; 
+        }
+      } else {
+        // Still waiting for group data. Show placeholder.
+        gData = { name: 'Loading...', type: 'group' };
+        const gl = document.getElementById('groupNameLabel');
+        if (gl) { 
+          gl.textContent = '👨‍👩‍👧‍👦 Loading Group...'; 
+          gl.style.display = 'inline-flex'; 
+        }
       }
     } else {
-      gData.budget = Number(gData.budget) || 0;
+      // Personal Mode
+      gData = { ...gUserDoc, type: 'personal' };
+      const gl = document.getElementById('groupNameLabel');
+      if (gl) { gl.style.display = 'none'; gl.textContent = '👨‍👩‍👧‍👦 —'; }
     }
-  } catch (err) {
-    console.error('[Dashboard] Profile load error:', err);
-  }
 
-  console.log('[Dashboard] Final gData:', JSON.stringify(gData));
-
-  // Set date string
-  var ds = document.getElementById('dateStr');
-  if (ds) ds.textContent = new Date().toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
-
-  // Tab visibility (watermark styling for non-grouped)
-  var tabNav = document.getElementById('mainTabNav');
-  if (tabNav) {
-    var myExpBtn = document.querySelector('button[data-tab="my-expenses"]');
-    var allExpBtn = document.querySelector('button[data-tab="all-expenses"]');
+    updateModeUI();
+    renderStats();
     
-    if (gData.groupId) {
-      if (myExpBtn) { myExpBtn.style.opacity = '1'; myExpBtn.style.pointerEvents = 'auto'; myExpBtn.title = ''; }
-      if (allExpBtn) { allExpBtn.style.opacity = '1'; allExpBtn.style.pointerEvents = 'auto'; allExpBtn.title = ''; }
-    } else {
-      if (myExpBtn) { myExpBtn.style.opacity = '0.4'; myExpBtn.style.pointerEvents = 'none'; myExpBtn.title = 'Requires Family Group'; }
-      if (allExpBtn) { allExpBtn.style.opacity = '0.4'; allExpBtn.style.pointerEvents = 'none'; allExpBtn.title = 'Requires Family Group'; }
-      switchTab('overview');
+    // Only render full tab content after initial load completes
+    if (gDashboardInit) {
+      renderOverview();
+      renderProfile();
     }
+  };
+
+  // 2. Attach Group Listener if required
+  if (gUserDoc.groupId) {
+    if (!gGroupListener) {
+      console.log('[Dashboard] Initializing Group Listener...');
+      gGroupListener = window.fbFS.collection('groups').doc(gUserDoc.groupId).onSnapshot(snap => {
+        if (snap.exists) {
+          gGroupDoc = { ...snap.data(), id: snap.id };
+          syncDashboardData(); // Update when group changes
+          
+          // If this is the FIRST time we get group data and we are in group mode, finish init
+          if (!gDashboardInit && gViewMode === 'group') {
+             finishDashboardLoading();
+          }
+        }
+      });
+    }
+  } else {
+    // Cleanup if no longer in group
+    if (gGroupListener) { gGroupListener(); gGroupListener = null; gGroupDoc = {}; }
   }
 
-  // Update sidebar user display
-  setTxt('userName', gData.name || gUser.email);
-  var av = document.getElementById('userAvatar');
-  if (av) av.textContent = (gData.name || gUser.email || 'U').charAt(0).toUpperCase();
-
-  // Logout button
-  var logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn && !logoutBtn._ls) {
-    logoutBtn._ls = true;
-    logoutBtn.addEventListener('click', function () {
-      window.fbAuth.signOut().then(function () { window.location.href = 'index.html'; });
+  // Centralized Initialization
+  const finishDashboardLoading = () => {
+    if (gDashboardInit) return;
+    gDashboardInit = true;
+    
+    // Set date string
+    var ds = document.getElementById('dateStr');
+    if (ds) ds.textContent = new Date().toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
-  }
 
-  // Start listening for expenses and notifications
-  renderStats();  // show budget immediately (expenses = 0 until snapshot fires)
-  listenForInvitations();
-  loadExpenses();
+    // Re-bind common static interactions
+    document.getElementById('logoutBtn')?.addEventListener('click', function () {
+      window.fbAuth.signOut().then(() => window.location.href = 'index.html');
+    });
 
-  // ─── Click-outside to close ───
-  window.addEventListener('click', function(e) {
-    // Chatbot
-    const chat = document.getElementById('chatbotWrap');
-    const toggle = document.querySelector('.chat-toggle');
-    if (chat && chat.classList.contains('show') && !chat.contains(e.target) && !toggle.contains(e.target)) {
-      chat.classList.remove('show');
-    }
+    // UI Click listeners (dropdowns etc)
+    window.addEventListener('click', function(e) {
+      ['chatbotWrap', 'notifDropdown', 'profileMenu'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.classList.contains('show') && !el.contains(e.target)) {
+          // Special exception for triggers
+          const triggers = ['.chat-toggle', '.notif-btn', '.profile-trigger'];
+          const isTrigger = triggers.some(t => e.target.closest(t));
+          if (!isTrigger) el.classList.remove('show');
+        }
+      });
+    });
+    
+    listenForInvitations(); // 🔔 Start notification sync on login
+    loadExpenses(); // Start syncing data records
+  };
 
-    // Notifications
-    const notif = document.getElementById('notifDropdown');
-    const notifBtn = document.getElementById('notifBtn');
-    if (notif && notif.classList.contains('show') && !notif.contains(e.target) && !notifBtn.contains(e.target)) {
-      notif.classList.remove('show');
-    }
-  });
+  // 🎯 Execution Flow
+  syncDashboardData();
+  
+  // If we are in Personal mode, we can finish init immediately
+  if (gViewMode === 'personal') {
+    finishDashboardLoading();
+  } 
+  // If we are in Group mode, finishDashboardLoading() will be called by the Group Snapshot listener above
 });
 
-// ─── Load Expenses (real-time listener) ─────────────────────────────────────
+// ─── Load Expenses (Atomic Filtered Sync) ───────────────────────────────────
 function loadExpenses() {
   if (!gUser) return;
-  console.log('[loadExpenses] Attaching listener. UID =', gUser.uid, ' groupId =', gData.groupId);
+  
+  // 🧹 CLEAN UP OLD LISTENER FIRST
+  if (gListener) {
+    console.log('[loadExpenses] Detaching old listener...');
+    gListener();
+    gListener = null;
+  }
 
-  window.fbFS.collection('expenses').onSnapshot(
+  console.log('[loadExpenses] Attaching listener. Mode =', gViewMode);
+
+  // If in personal mode, filter by createdBy. If in group mode, filter by groupId.
+  let query = window.fbFS.collection('expenses');
+  if (gViewMode === 'group' && gUserDoc.groupId) {
+    query = query.where('groupId', '==', gUserDoc.groupId);
+  } else {
+    query = query.where('createdBy', '==', gUser.uid);
+  }
+
+  // Store the unsubscribe function to gListener
+  gListener = query.onSnapshot(
     function (snap) {
-      console.log('[loadExpenses] Snapshot fired. Total docs in collection:', snap.size);
-
       gExpenses   = [];
       gMyExpenses = [];
 
@@ -256,8 +440,14 @@ function loadExpenses() {
 
       console.log('[loadExpenses] After filter → gExpenses:', gExpenses.length, ' gMyExpenses:', gMyExpenses.length);
 
-      // Sort newest date first
-      var byDate = function (a, b) { return (b.date || '').localeCompare(a.date || ''); };
+      // Sort newest date first. If dates equal, use createdAt for sub-sort
+      var byDate = function (a, b) { 
+        var dateCompare = (b.date || '').localeCompare(a.date || '');
+        if (dateCompare !== 0) return dateCompare;
+        var timeA = a.createdAt?.seconds || 0;
+        var timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      };
       gExpenses.sort(byDate);
       gMyExpenses.sort(byDate);
 
@@ -289,8 +479,21 @@ function renderStats() {
 
   setTxt('sBudget',    sym + fmt(budget));
   setTxt('sSpent',     sym + fmt(total));
-  setTxt('sRemaining', sym + fmt(left));
+  setTxt('sRemaining', sym + fmt(Math.abs(left)));
   setTxt('sCount',     gExpenses.length);
+
+  // 🚨 Exceed Label Logic
+  const remValueEl = document.getElementById('sRemaining');
+  if (remValueEl) {
+    const remLabelEl = remValueEl.previousElementSibling;
+    if (left < 0) {
+      if (remLabelEl) remLabelEl.textContent = 'Exceeded';
+      remValueEl.style.color = 'var(--danger)';
+    } else {
+      if (remLabelEl) remLabelEl.textContent = 'Remaining';
+      remValueEl.style.color = '';
+    }
+  }
 
   var pct = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
   var pf  = document.getElementById('progressFill');
@@ -302,6 +505,24 @@ function renderStats() {
     else if (pct >= 75) pf.classList.add('warn');
   }
   if (pb) pb.textContent = Math.round(pct) + '%';
+
+  // 🔔 Local Alert Banner (3s Auto-hide)
+  var ab = document.getElementById('alertBanner');
+  if (ab) {
+    if (pct >= 90) {
+      if (!ab.classList.contains('show')) {
+        ab.classList.add('show');
+        // Clear any existing timeout and set a new one for 3s
+        if (window.alertTimer) clearTimeout(window.alertTimer);
+        window.alertTimer = setTimeout(function() {
+          ab.classList.remove('show');
+        }, 3000);
+      }
+    } else {
+      ab.classList.remove('show');
+      if (window.alertTimer) clearTimeout(window.alertTimer);
+    }
+  }
 
   setTxt('pSpent', sym + fmt(total) + ' spent');
   setTxt('pLeft',  sym + fmt(Math.max(0, left)) + ' left');
@@ -322,7 +543,7 @@ function renderOverview() {
 
   renderCatBreakdown(catTotals);
   updateDonutChart(catTotals);
-  renderList('overviewExpenseList', gExpenses.slice(0, 10));
+  renderList('overviewExpenseList', gExpenses.slice(0, 5)); // 📉 Limited to 5 for cleaner UI
 
   var rc = document.getElementById('recentCount');
   if (rc) rc.textContent = gExpenses.length + ' total';
@@ -395,15 +616,20 @@ function renderList(containerId, items) {
   var sym = gData.symbol || '₹';
 
   items.forEach(function (e) {
+    var isSync = !!e.isSync;
     var row = document.createElement('div');
-    row.className = 'expense-item';
+    row.className = 'expense-item' + (isSync ? ' is-synced' : '');
     row.innerHTML =
       '<div class="exp-icon">' + catIcon(e.category) + '</div>' +
       '<div class="exp-info">' +
-        '<div class="exp-title">' + esc(e.title) + '</div>' +
+        '<div class="exp-title">' + 
+          esc(e.title) + 
+          (isSync ? ' <span class="sync-pill">Synced</span>' : '') + 
+        '</div>' +
         '<div class="exp-meta">' +
           esc(e.category || 'Other') + ' &bull; ' + (e.date || '—') +
           (e.addedByName ? ' &bull; ' + esc(e.addedByName) : '') +
+          (isSync ? ' &bull; 🔗 Sync' : '') +
         '</div>' +
       '</div>' +
       '<div class="exp-amount">' + sym + fmt(e.amount) + '</div>' +
@@ -477,7 +703,7 @@ function listenForInvitations() {
 // ─── Respond to Invite ───────────────────────────────────────────────────────
 window.respondInvite = function (invId, status, groupId) {
   if (!gUser) return;
-  const invRef = window.fbFS.collection('invitations').doc(invId);
+  const invRef = window.fbFS.collection('invites').doc(invId);
 
   invRef.update({ status: status })
     .then(async function () {

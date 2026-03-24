@@ -4,6 +4,15 @@ const cors = require('cors');
 const morgan = require('morgan');
 const axios = require('axios');
 const path = require('path');
+const admin = require('firebase-admin');
+
+// 🔐 Firebase Admin Init
+const serviceAccount = require('./expense-tracker-c3176-firebase-adminsdk-fbsvc-d1beeb1e6f.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: process.env.FB_DB_URL
+});
+const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -17,11 +26,11 @@ app.use(express.json({ limit: '50mb' }));
 app.post('/api/ai/chat', async (req, res) => {
   const { messages } = req.body;
   const apiKey = process.env.GROQ_API_KEY || process.env.OPENROUTER_KEY;
-  const url = process.env.GROQ_API_KEY 
-    ? 'https://api.groq.com/openai/v1/chat/completions' 
+  const url = process.env.GROQ_API_KEY
+    ? 'https://api.groq.com/openai/v1/chat/completions'
     : 'https://openrouter.ai/api/v1/chat/completions';
-  
-  const model = process.env.GROQ_API_KEY 
+
+  const model = process.env.GROQ_API_KEY
     ? (process.env.GROQ_MODEL_SCAN || 'llama-3.3-70b-versatile')
     : (process.env.OPENROUTER_MODEL || 'arcee-ai/trinity-large-preview:free');
 
@@ -48,87 +57,224 @@ const schema = {
   note: "Brief note"
 };
 
+// 🛡️ INDESTRUCTIBLE EXTRACTION ENGINE
 app.post('/api/ai/parse', async (req, res) => {
   const { txt, fileBase64, fileType } = req.body;
-  const apiKey = process.env.GROQ_API_KEY || process.env.OPENROUTER_KEY;
-  
-  const systemPrompt = `You are a financial parser. Return ONLY JSON matching this schema: ${JSON.stringify(schema)}.
-Rules: 
-1. Use null if data missing.
-2. For missing dates, use: ${new Date().toISOString().slice(0, 10)}.
-3. Valid categories: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Other.`;
+  const orKey = process.env.OPENROUTER_KEY;
+  const groqKey = process.env.GROQ_API_KEY;
+
+  const systemPrompt = `You are a financial scanner. Your task is to extract exact merchant details, amount, category, date, and any note into a JSON object.
+  RULES:
+  1. MERCHANT: The store or company name.
+  2. AMOUNT: Just the numeric total (e.g., 500, not ₹500).
+  3. CATEGORY: Exactly one of: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Other.
+  4. DATE: Format YYYY-MM-DD.
+  5. OUTPUT: Return ONLY the JSON object. Do not explain anything.
+  Schema: ${JSON.stringify(schema)}`;
 
   const messages = [{ role: 'system', content: systemPrompt }];
   if (fileBase64) {
     messages.push({
       role: 'user',
       content: [
-        { type: 'text', text: 'Extract from image.' },
+        { type: 'text', text: 'Parse this financial document.' },
         { type: 'image_url', image_url: { url: `data:${fileType || 'image/jpeg'};base64,${fileBase64}` } }
       ]
     });
   } else {
-    messages.push({ role: 'user', content: `Extract from text: "${txt}"` });
+    messages.push({ role: 'user', content: `Text: "${txt}"` });
+  }
+
+  // 🔄 THE INDESTRUCTIBLE ENGINE (Vision-Optimized)
+  const models = [
+    { provider: 'OR', id: 'nvidia/nemotron-nano-12b-v2-vl:free' },       // 🥇 Proven Vision Leader
+    { provider: 'OR', id: 'google/gemini-flash-1.5:free' },             // 🥈 Fast & Reliable Google
+    { provider: 'OR', id: 'meta-llama/llama-3.2-11b-vision-instruct:free' }, // 🥉 Meta Vision Expert
+    { provider: 'OR', id: 'qwen/qwen-2-vl-7b-instruct:free' }           // 🏅 Qwen VL Fallback
+  ];
+
+  let lastError = null;
+
+  for (const m of models) {
+    try {
+      console.log(`🚀 Attempting extraction with ${m.provider}:${m.id}...`);
+      const isOR = m.provider === 'OR';
+      const url = isOR ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
+      const key = isOR ? orKey : groqKey;
+
+      if (!key) continue;
+
+      const response = await axios.post(url, {
+        model: m.id,
+        messages: messages,
+        temperature: 0.1
+      }, {
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          ...(isOR ? { 'HTTP-Referer': 'http://localhost:3002', 'X-Title': 'Walletly' } : {})
+        },
+        timeout: 20000
+      });
+
+      const raw = response.data?.choices?.[0]?.message?.content;
+      if (!raw) throw new Error('Empty response');
+
+      // Robust JSON Extraction
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No JSON found in response');
+
+      const cleanJson = JSON.parse(match[0]);
+      console.log('✅ Extraction successful with:', m.id);
+      return res.json({ success: true, data: cleanJson });
+
+    } catch (e) {
+      console.warn(`❌ Model ${m.id} failed:`, e.response?.data?.error?.message || e.message);
+      lastError = e;
+      continue; // Try next model
+    }
+  }
+
+  const finalError = lastError?.response?.data?.error?.message || lastError?.message || 'All AI providers failed';
+  res.status(500).json({ error: 'AI Failure', message: finalError });
+});
+
+// 💸 EXTERNAL PAYMENT SYNC (For cross-app Razorpay/Webhook sync)
+app.post('/api/payments/external-sync', async (req, res) => {
+  // Extract values with deeper search for webhooks (handles nested payload)
+  const b = req.body;
+  const p = (b.payload && b.payload.payment && b.payload.payment.entity) || {};
+  const notes = b.notes || p.notes || {};
+
+  const userId = b.userId || notes.userId || b.user_id || '';
+  const amount = b.amount || p.amount || b.total || 0;
+  const secret = b.secret || notes.secret || req.headers['x-sync-secret'] || '';
+
+  // Multi-source detection for Merchant and Item Name
+  const merchant = b.merchant || notes.merchant || p.description || b.source || b.app || 'External App';
+  const itemName = b.itemName || notes.itemName || notes.item || b.item || b.description || notes.description || 'External Purchase';
+
+  // 1️⃣ Validate Secret
+  const syncSecret = process.env.SYNC_SECRET_KEY || 'wt_secret_123';
+  if (!secret || secret !== syncSecret) {
+    console.error(`[Sync] Unauthorized sync attempt for user ${userId}.`);
+    return res.status(403).json({ success: false, message: 'Invalid or missing sync secret.' });
+  }
+
+  // 2️⃣ Basic Validation
+  if (!userId || !amount) {
+    return res.status(400).json({ success: false, message: 'Missing userId or amount.' });
   }
 
   try {
-    const url = fileBase64 && process.env.GROQ_API_KEY
-        ? 'https://api.groq.com/openai/v1/chat/completions'
-        : 'https://openrouter.ai/api/v1/chat/completions';
-    
-    // Use vision model for images
-    const model = (fileBase64 && process.env.GROQ_API_KEY)
-        ? (process.env.GROQ_MODEL_VISION || 'llama-3.2-11b-vision-preview')
-        : (process.env.OPENROUTER_MODEL_PARSE || 'google/gemini-2.0-flash-exp:free');
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
 
-    const response = await axios.post(url, {
-      model: model,
-      messages: messages,
-      temperature: 0.1
-    }, {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-      timeout: 25000
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, message: 'User not found in Walletly.' });
+    }
+
+    const userData = userDoc.data();
+    const payAmount = (amount > 10000 && !amount.toString().includes('.')) ? parseFloat(amount) / 100 : parseFloat(amount);
+    const userName = userData.name || 'External User';
+    const groupId = userData.groupId || null;
+    const groupRef = groupId ? db.collection('groups').doc(groupId) : null;
+
+    // 🏆 Use 100% Atomic Transaction
+    await db.runTransaction(async (t) => {
+      // 1. ALL READS FIRST
+      const uSnap = await t.get(userRef);
+      const uData = uSnap.data();
+      const syncToGroup = uData.syncToGroup === true; // Check preference
+
+      let gSnap = null;
+      if (groupRef && syncToGroup) {
+        gSnap = await t.get(groupRef);
+      }
+
+      // 2. ALL WRITES SECOND
+      // a. Update Personal Budget
+      const currentPB = parseFloat(uData.budget || 0);
+      t.update(userRef, { budget: currentPB - payAmount });
+
+      // b. Update Group Budget (Conditional)
+      if (gSnap && gSnap.exists) {
+        const currentGB = parseFloat(gSnap.data().budget || 0);
+        t.update(groupRef, { budget: currentGB - payAmount });
+      }
+
+      // c. Record Expense
+      const expRef = db.collection('expenses').doc();
+      t.set(expRef, {
+        title: itemName,
+        amount: payAmount,
+        category: 'Other',
+        date: new Date().toISOString().split('T')[0],
+        note: `Synced via ${merchant}${syncToGroup ? ' (Group Sync Enabled)' : ''}`,
+        createdBy: userId,
+        addedByName: userName,
+        userEmail: uData.email || '',
+        groupId: groupId,
+        groupName: userData.groupName || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // d. Notify User
+      const notifRef = db.collection('notifications').doc();
+      t.set(notifRef, {
+        userId: userId,
+        title: merchant, // Use merchant as title
+        message: `₹${payAmount.toFixed(2)} spent on ${itemName}.${syncToGroup ? ' (Family Budget Deducted)' : ''}`,
+        type: 'sync',
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
     });
 
-    const raw = response.data?.choices?.[0]?.message?.content;
-    const match = raw.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(match ? match[0] : raw);
-    res.json({ success: true, data: parsed });
+    console.log(`✅ Synced ₹${payAmount} for User ${userId}`);
+    res.json({ success: true, message: `Budget deducted ${userData.syncToGroup ? 'across profiles' : 'individually'} for ₹${payAmount.toFixed(2)}` });
   } catch (error) {
-    console.error('AI Parse Error:', error.message);
-    res.status(500).json({ error: 'AI Parse Error', message: error.message });
+    console.error('🔥 Payment Sync Transaction Failed:', error.message);
+    res.status(500).json({ success: false, message: 'Internal transaction error.' });
   }
 });
 
 app.post('/api/ai/generate-email', async (req, res) => {
   const { type, data } = req.body;
   const apiKey = process.env.GROQ_API_KEY || process.env.OPENROUTER_KEY;
-  
+
   let prompt = "";
   if (type === 'critical') {
-    prompt = `Act as a senior financial advisor.
-Data: Budget ₹${data.budget}, Total Spent ₹${data.spent} (${data.pct}%).
-Generate a critical, urgent, but professional email body (no subject) warning the user they are almost out of budget. 
-Focus on specific categories if provided: ${JSON.stringify(data.categories)}. 
-Include 3 immediate action items to prevent overspending. Use a serious but supportive tone.`;
+    prompt = `Act as a senior lead financial strategist.
+    URGENT ALERT: Budget at ${data.pct}% capacity.
+    Data: Budget ₹${data.budget}, Total Spent ₹${data.spent}.
+    Categories: ${JSON.stringify(data.categories)}.
+    
+    TASK: Generate a critical warning.
+    - MANDATORY: Use Indian Rupees (₹) for all amounts.
+    - START WITH DIRECT FINDINGS.
+    - LIST 3 ACTION ITEMS as bullet points (•).
+    - ONE SENTENCE PER BULLET MAX.
+    - NO INTRODUCTIONS. NO CHATTY TEXT. EXTREMELY BRIEF.`;
   } else {
-    prompt = `Act as a senior financial strategist.
-Type: ${type} Report (Weekly/Monthly).
-Financial Data: ${JSON.stringify(data)}.
-Generate a comprehensive, highly organized financial report email body (no subject).
-Include: 
-1. Performance summary vs previous period. 
-2. Deep dive into spending clusters. 
-3. Future projection. 
-4. AI-driven strategic capital preservation plan. 
-Keep it "Sure Shot" and formatted with professional bullet points.`;
+    prompt = `Act as a senior high-stakes financial advisor report. 
+    Data: ${JSON.stringify(data)}.
+    
+    STYLE:
+    - MANDATORY: Use Indian Rupees (₹) exclusively.
+    - HIGHLY ORGANIZED: Bullet points (•) for all findings.
+    - NO FLUFF. NO CHATTY TEXT.
+    
+    STRUCTURE:
+    - 📊 CURRENT STATUS: 2 brief points.
+    - ⚠️ CATEGORY RISKS: 2 brief points.
+    - ✅ ACTION PLAN: 3 brief points.`;
   }
 
   try {
-    const url = process.env.GROQ_API_KEY 
-        ? 'https://api.groq.com/openai/v1/chat/completions' 
-        : 'https://openrouter.ai/api/v1/chat/completions';
-    
+    const url = process.env.GROQ_API_KEY
+      ? 'https://api.groq.com/openai/v1/chat/completions'
+      : 'https://openrouter.ai/api/v1/chat/completions';
+
     const response = await axios.post(url, {
       model: process.env.GROQ_MODEL_SCAN || 'llama-3.3-70b-versatile',
       messages: [{ role: 'system', content: 'Generate only the email body text. Use professional formatting.' }, { role: 'user', content: prompt }],

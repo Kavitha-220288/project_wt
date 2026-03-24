@@ -251,22 +251,8 @@ window.loadInvites = function () {
 };
 
 // ── Load Notification Badge (for topbar bell) ─────────────────────────────────
-window.listenForNotifications = function (uid) {
-  if (!uid) return;
-  window.fbFS.collection('invites')
-    .where('toUid', '==', uid)
-    .where('status', '==', 'pending')
-    .onSnapshot(function (snap) {
-      var badge = document.getElementById('notifBadge');
-      if (!badge) return;
-      if (snap.size > 0) {
-        badge.innerText = snap.size;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    });
-};
+// Removed: Duplicate of version in common.js to prevent overwriting correctly unified behavior.
+
 
 // ── Load Group Members ────────────────────────────────────────────────────────
 window.loadGroupMembers = function (groupId, currentUserId) {

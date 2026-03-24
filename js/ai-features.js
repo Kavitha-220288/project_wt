@@ -1,5 +1,32 @@
 // js/ai-features.js — FinBuddy Advanced AI Support
 
+// 🧪 TEST EMAIL (Call window.testEmail() in console)
+window.testEmail = async function() {
+  if (typeof showToast !== 'function') { alert('Common JS not loaded'); return; }
+  if (typeof gUser === 'undefined' || !gUser) { showToast('Auth not ready. Wait 1 sec.', 'info'); return; }
+  
+  showToast('Sending test AI report...', 'info');
+  
+  try {
+    const catTotals = typeof getCatTotals === 'function' ? getCatTotals() : {};
+    const total = Object.values(catTotals).reduce((a, b) => a + b, 0);
+    const budget = (typeof gData !== 'undefined' && gData.budget) || 10000;
+    
+    const content = await callAIGenEmail('Weekly', { 
+      budget: budget, 
+      spent: total, 
+      categories: catTotals, 
+      expenses: (typeof gExpenses !== 'undefined') ? gExpenses.slice(0, 10) : [] 
+    });
+    
+    await sendEmailJS('FinBuddy: Manual Test Report', content);
+    showToast('Test email sent! Check inbox.', 'success');
+  } catch (e) {
+    console.error('Test Email Failed:', e);
+    showToast('Email test failed. Check console.', 'error');
+  }
+};
+
 // 📸 Fast Image Compressor (Standalone)
 window.compressImage = function(file, maxWidth, maxHeight, quality) {
   return new Promise((resolve, reject) => {
@@ -18,9 +45,9 @@ window.compressImage = function(file, maxWidth, maxHeight, quality) {
         }
         canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
-        ctx.filter = 'grayscale(100%) contrast(120%) brightness(105%)';
+        // REMOVED grayscale/contrast filters to let Gemini see original receipt colors
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.65);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality || 0.8);
         resolve(dataUrl.split(',')[1]); 
       };
       img.onerror = reject;
@@ -38,21 +65,23 @@ window.startVoiceTracking = function() {
   if (!SR) { showToast('Speech Recognition not supported in this browser.', 'error'); return; }
 
   const rec = new SR(); rec.lang = 'en-IN';
-  showToast('Listening for expense details...', 'success');
-
+  
   rec.onresult = async (event) => {
     const text = event.results[0][0].transcript;
-    showToast(`Parsing: "${text}"`, '');
+    const modal = document.querySelector('.modal');
+    if (modal) modal.classList.add('scanning');
     
     try {
       const data = await callAIParse(text);
       if (data && data.amount) {
         fillExpenseForm(data);
-        showToast(`Heard ₹${data.amount} for ${data.category}`, 'success');
+        showToast(`Heard ₹${data.amount}`, 'success');
       }
     } catch (e) {
       console.error('Voice parse error:', e);
-      showToast('AI analysis failed. Please enter manually.', 'error');
+      showToast('AI analysis failed.', 'error');
+    } finally {
+      if (modal) modal.classList.remove('scanning');
     }
   };
   rec.start();
@@ -61,27 +90,29 @@ window.startVoiceTracking = function() {
 // ── 📸 RECEIPT SCANNING (FAST AI OCR) ─────────────────────────────
 window.processReceiptOCR = async function(file) {
   if (!file) return;
-  
   const btn = document.querySelector('.tool-btn:nth-child(2)');
   if (btn) btn.disabled = true;
-  showToast('AI Vision analysis in progress...', 'success');
+  const modal = document.querySelector('.modal');
+  if (modal) modal.classList.add('scanning');
 
   try {
-    // ⚡ Compress first (reduces payload to ~30KB)
-    const base64 = await window.compressImage(file, 800, 800, 0.6);
+    // ⚡ Compress with color preservation (Balanced for size/quality)
+    const base64 = await window.compressImage(file, 1000, 1000, 0.6);
     const result = await callAIParse(null, base64, 'image/jpeg');
 
-    if (result && result.amount) {
+    if (result) {
       fillExpenseForm(result);
-      showToast(`Scan Complete: ₹${result.amount} ✓`, 'success');
+      showToast(`Scan Complete: ₹${result.amount || 'Found'} ✓`, 'success');
+      if (typeof window.triggerCoinBurst === 'function') window.triggerCoinBurst();
     } else {
-      showToast('Could not find total amount clearly.', 'error');
+      throw new Error("Could not extract data");
     }
   } catch (err) {
     console.error('Scan Error:', err);
-    showToast('AI Scanning failed. Is the server running?', 'error');
+    showToast('AI Scanning failed. Ensure your OpenRouter key is valid.', 'danger');
   } finally {
     if (btn) btn.disabled = false;
+    if (modal) modal.classList.remove('scanning');
   }
 };
 
@@ -109,12 +140,12 @@ Rules:
 
   try {
     const reply = await callAIChat([{ role: 'user', content: prompt }]);
-    // Basic formatting for bullet points if the AI didn't provide them perfectly
+    // Convert specifically for the UI
     const formatted = reply
-      .replace(/\n- /g, '<br>• ')
-      .replace(/\n\* /g, '<br>• ')
-      .replace(/\n\d\. /g, '<br>• ')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      .replace(/\n([-*•])\s/g, '<br>• ') // Fix bullet points
+      .replace(/\n(\d\.\s)/g, '<br>$1') // Fix numbered lists
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
       
     body.innerHTML = `<div class="insight-text">${formatted}</div>`;
   } catch (err) {
@@ -145,10 +176,10 @@ window.sendChat = async function() {
 Current State: Total Spent ₹${totalSpent.toLocaleString()}, Budget ₹${budget.toLocaleString()}. 
 Categories: ${JSON.stringify(catTotals)}.
 Rules: 
-1. Keep responses CONCISE and highly organized. 
-2. Use BULLET POINTS and BOLD terms for readability. 
-3. Reference the user's data ONLY if relevant. 
-4. Don't be too chatty; focus on value.`
+1. MANDATORY: Use Indian Rupees (₹) for ALL amounts. No dollars ($).
+2. HIGHLY ORGANIZED: Return items line by line using bullet points (•). 
+3. BE CONCISE: Use bold terms for key values. 
+4. Don't be too chatty; focus on precision.`
   };
 
   // Keep history manageable
@@ -170,9 +201,9 @@ Rules:
 
     // Convert markdown specifically for the UI
     const formatted = reply
+      .replace(/\n([-*•])\s/g, '<br>• ') // Multi-style bullet catching
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n- (.*?)\n/g, '<br>• $1<br>')
-      .replace(/\n\n/g, '<br>');
+      .replace(/\n/g, '<br>');
 
     appendMsg(formatted, 'bot');
     chatHistory.push({ role: 'assistant', content: reply });
@@ -258,16 +289,28 @@ window.checkEmailAlerts = async function() {
   if (pct >= 90) {
     if (!alertSent90 && initialCheckDone) {
       alertSent90 = true;
-      showToast('Budget Critical! AI Alert Sending...', 'error');
       
+      // a. Show Visual Banner
       const banner = document.getElementById('alertBanner');
       if (banner) {
         banner.classList.add('show');
-        setTimeout(() => banner.classList.remove('show'), 5000);
+        setTimeout(() => banner.classList.remove('show'), 3000);
       }
 
-      const content = await callAIGenEmail('critical', { budget, spent: total, pct: pct.toFixed(1), categories: catTotals });
-      await sendEmailJS('Critical Budget Alert', content);
+      // b. Send Critical AI Email Alert
+      showToast('Budget Critical! Sending AI Alert Email...', 'warn');
+      try {
+        const content = await callAIGenEmail('critical', { 
+          budget: budget, 
+          spent: total, 
+          pct: Math.round(pct),
+          categories: catTotals 
+        });
+        await sendEmailJS('FinBuddy: 🚨 CRITICAL BUDGET ALERT (90%)', content);
+        console.log('[checkEmailAlerts] Critical email sent.');
+      } catch (e) {
+        console.error('Critical Email Failed:', e);
+      }
     }
   } else {
     alertSent90 = false; 
@@ -318,16 +361,20 @@ async function sendEmailJS(subject, body) {
   // Initialize
   emailjs.init('uAvs_vvHsOuxv7jf8'); 
 
-  // Mapping exactly to what the template expected
+  // Mapping exactly to what the template might expect (standard and common alternates)
   const params = {
     to_name: gUser.displayName || gUser.email.split('@')[0],
     to_email: gUser.email.trim(),
+    to: gUser.email.trim(), // Some templates use 'to'
+    user_email: gUser.email.trim(), // Others use 'user_email'
     subject: subject,
     message: body
   };
 
+  console.log('[sendEmailJS] Attempting send with:', params);
+
   try {
-    const res = await emailjs.send('service_6q1bauo', 'template_uqgsj85', params);
+    const res = await emailjs.send('service_6q1bauo', 'template_uqgsj85', params, 'uAvs_vvHsOuxv7jf8');
     if (res.status === 200) console.log('✅ AI Email sent successfully!');
   } catch (err) {
     console.error('❌ EmailJS Error:', err);
@@ -336,8 +383,8 @@ async function sendEmailJS(subject, body) {
 
 // Init on load
 setTimeout(() => {
-  if (gUser) {
+  if (typeof gUser !== 'undefined' && gUser) {
     refreshInsights();
-    checkPeriodicReports(); // Run once per login/session check
+    if (typeof checkPeriodicReports === 'function') checkPeriodicReports(); 
   }
 }, 4000);

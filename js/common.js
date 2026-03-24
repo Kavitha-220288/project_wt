@@ -73,7 +73,7 @@
       setTimeout(() => {
         if (type) el.classList.remove(type);
       }, 400);
-    }, 4000); 
+    }, 5000); 
   };
 
   // 🔐 AUTH GUARD
@@ -156,62 +156,63 @@
 
   window.requireAuth = function (callback) {
     fbAuth.onAuthStateChanged(function (user) {
-
       if (!user) {
         window.location.href = 'index.html';
         return;
       }
 
-      fbFS.collection('users').doc(user.uid).get()
-        .then(function (doc) {
+      // 🔄 Real-time User Doc Listener
+      fbFS.collection('users').doc(user.uid).onSnapshot(function (doc) {
+        if (!doc.exists) {
+          window.location.href = 'setup.html';
+          return;
+        }
 
-          if (!doc.exists) {
-            window.location.href = 'setup.html';
-            return;
-          }
+        const data = doc.data();
+        const enrichedData = {
+          ...data,
+          name: data.name || user.email.split('@')[0],
+          role: data.role || (data.groupId ? 'member' : null)
+        };
 
-          const data = doc.data();
+        if (!enrichedData.groupId && !enrichedData.budget) {
+          window.location.href = 'setup.html';
+          return;
+        }
 
-          const enrichedData = {
-            ...data,
-            name: data.name || user.email.split('@')[0],
-            role: data.role || (data.groupId ? 'member' : null)
-          };
-
-          if (!enrichedData.groupId && !enrichedData.budget) {
-            window.location.href = 'setup.html';
-            return;
-          }
-
-          // 👤 USER UI
-          const av = document.getElementById('userAvatar');
-          const un = document.getElementById('userName');
-          const ur = document.querySelector('.user-role');
-          
+        // 👤 UPDATE USER UI (INSTANT SYNC)
+        const av = document.getElementById('userAvatar');
+        const un = document.getElementById('userName');
+        const ur = document.querySelector('.user-role');
+        
+        // If we are on dashboard.html, let dashboard.js handle context-aware name/avatar
+        const isDashboard = /dashboard(\.html)?$/.test(window.location.pathname);
+        if (!isDashboard) {
           if (un) un.textContent = enrichedData.name;
           if (av) av.textContent = enrichedData.name.charAt(0).toUpperCase();
-          if (ur) ur.textContent = enrichedData.role === 'admin' ? 'Owner' : 'Member';
+        }
+        if (ur) ur.textContent = enrichedData.role === 'admin' ? 'Owner' : 'Member';
 
-          // 🚪 Logout listeners and other common initializations
-          const logoutBtn = document.getElementById('logoutBtn');
-          if (logoutBtn && !logoutBtn._hasListener) {
-            logoutBtn.addEventListener('click', function() {
-              window.fbAuth.signOut().then(() => window.location.href = 'index.html');
-            });
-            logoutBtn._hasListener = true;
-          }
-          
-          const themeBtn = document.getElementById('themeBtn');
-          if (themeBtn && !themeBtn._hasListener) {
-            themeBtn.addEventListener('click', window.toggleTheme);
-            themeBtn._hasListener = true;
-          }
+        // 🚪 Logout listeners and other common initializations
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn && !logoutBtn._hasListener) {
+          logoutBtn.addEventListener('click', function() {
+            window.fbAuth.signOut().then(() => window.location.href = 'index.html');
+          });
+          logoutBtn._hasListener = true;
+        }
+        
+        const themeBtn = document.getElementById('themeBtn');
+        if (themeBtn && !themeBtn._hasListener) {
+          themeBtn.addEventListener('click', window.toggleTheme);
+          themeBtn._hasListener = true;
+        }
 
-          callback(user, enrichedData);
-        }).catch(function(err) {
-          console.error("Auth error:", err);
-          window.location.href = 'index.html';
-        });
+        callback(user, enrichedData);
+      }, function(err) {
+        console.error("User sync error:", err);
+        window.location.href = 'index.html';
+      });
     });
   };
 
@@ -225,39 +226,108 @@
     if (!uid) return;
     const body = document.getElementById('notifBody');
     const badge = document.getElementById('notifBadge');
+    let allItems = [];
+    let lastSeenCount = parseInt(localStorage.getItem('wt_notif_seen') || '0');
 
-    window.fbFS.collection('invitations')
-      .where('inviteeEmail', '==', window.fbAuth.currentUser.email)
-      .where('status', '==', 'pending')
-      .onSnapshot(function (snap) {
-        if (!body) return;
-        body.innerHTML = '';
-        const count = snap.size;
-        
+    // 🔥 Reset Badge on Open
+    const btn = document.getElementById('notifBtn');
+    if (btn && !btn._notifObs) {
+      btn._notifObs = true;
+      btn.addEventListener('click', () => {
+        lastSeenCount = allItems.length;
+        localStorage.setItem('wt_notif_seen', lastSeenCount);
         if (badge) {
-          badge.textContent = count;
-          badge.style.display = count > 0 ? 'flex' : 'none';
+          badge.style.display = 'none';
+          badge.textContent = '0';
         }
+      });
+    }
 
-        if (count === 0) {
-          body.innerHTML = '<div class="notif-empty">No new notifications</div>';
-          return;
-        }
+    const render = () => {
+      if (!body) return;
+      body.innerHTML = '';
+      
+      // Sort newest date first
+      allItems.sort((a,b) => {
+        const timeA = a.createdAt?.seconds || (a.createdAt instanceof Date ? a.createdAt.getTime()/1000 : 0);
+        const timeB = b.createdAt?.seconds || (b.createdAt instanceof Date ? b.createdAt.getTime()/1000 : 0);
+        return timeB - timeA;
+      });
+      
+      // Calculate 'New' items (those arrived since we last clicked)
+      const newItemsCount = allItems.length - lastSeenCount;
+      if (badge && newItemsCount > 0) {
+        badge.textContent = newItemsCount;
+        badge.style.display = 'flex';
+      }
 
-        snap.forEach(function (doc) {
-          const inv = doc.data();
-          const id = doc.id;
-          const item = document.createElement('div');
-          item.className = 'notif-item';
-          item.innerHTML = `
-            <div class="notif-text"><strong>${inv.inviterName || 'Someone'}</strong> invited you to join the group <strong>${inv.groupName || 'Family'}</strong>.</div>
-            <div class="notif-actions">
-              <button class="notif-btn-accept" onclick="respondInvite('${id}', 'accepted', '${inv.groupId}')">Accept</button>
-              <button class="notif-btn-decline" onclick="respondInvite('${id}', 'declined')">Decline</button>
+      if (allItems.length === 0) {
+        body.innerHTML = '<div class="notif-empty">No activity yet.</div>';
+        return;
+      }
+
+      allItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'notif-item';
+        
+        if (item._type === 'invite') {
+          div.innerHTML = `
+            <div class="notif-icon-circle blue">📩</div>
+            <div class="notif-content">
+              <div class="notif-text"><strong>${item.inviterName || 'Someone'}</strong> invited you to <strong>${item.groupName || 'Group'}</strong>.</div>
+              <div class="notif-actions">
+                <button class="notif-btn-accept" onclick="respondInvite('${item.id}', 'accepted', '${item.groupId}')">Accept</button>
+                <button class="notif-btn-decline" onclick="respondInvite('${item.id}', 'declined')">Decline</button>
+              </div>
             </div>
           `;
-          body.appendChild(item);
-        });
+        } else {
+          const isSync = item.type === 'sync';
+          div.innerHTML = `
+            <div class="notif-icon-circle ${isSync ? 'purple' : 'green'}">${isSync ? '🔗' : '💸'}</div>
+            <div class="notif-content">
+              <div class="notif-title">${item.title}</div>
+              <div class="notif-message">${item.message}</div>
+            </div>
+          `;
+        }
+        body.appendChild(div);
+      });
+    };
+
+    // Listen 1: Invitations (Case-insensitive support)
+    const emailStr = (window.fbAuth.currentUser.email || '').toLowerCase();
+    window.fbFS.collection('invites')
+      .where('inviteeEmail', '==', emailStr)
+      .where('status', '==', 'pending')
+      .onSnapshot(snap => {
+        const invites = snap.docs.map(d => ({ ...d.data(), id: d.id, _type: 'invite' }));
+        allItems = allItems.filter(i => i._type !== 'invite').concat(invites);
+        render();
+      });
+
+    // Listen 2: Activity Notifications (spent, sync, etc)
+    window.fbFS.collection('notifications')
+      .where('userId', '==', uid)
+      .orderBy('createdAt', 'desc').limit(10)
+      .onSnapshot(snap => {
+        const news = snap.docs.map(d => ({ ...d.data(), id: d.id, _type: 'notif' }));
+        allItems = allItems.filter(i => i._type !== 'notif').concat(news);
+        render();
+      }, err => {
+        console.error('Notifications listener error:', err);
+        if (err.message.includes('index')) {
+          console.warn('Composite index required for notifications. Check Firestore console.');
+          // Fallback: try without orderBy if it fails?
+          window.fbFS.collection('notifications')
+            .where('userId', '==', uid)
+            .limit(10)
+            .onSnapshot(s => {
+               const n = s.docs.map(d => ({ ...d.data(), id: d.id, _type: 'notif' }));
+               allItems = allItems.filter(i => i._type !== 'notif').concat(n);
+               render();
+            });
+        }
       });
   };
 

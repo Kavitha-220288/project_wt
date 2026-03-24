@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Marketplace - Premium Services</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK (Compat mode for easier integration) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <h2>Welcome Back</h2>
+            <p>Login to your Walletly account to start buying.</p>
+            <form id="login-form">
+                <input type="email" id="login-email" placeholder="Email Address" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+            
+            <div class="divider">or continue with</div>
+            
+            <button id="google-login-btn" class="btn-google">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                Sign in with Google
+            </button>
+            
+            <p class="login-footer">Don't have an account? Sign up on Walletly.</p>
+        </div>
+    </div>
+
+    <!-- Marketplace Section (Hidden until login) -->
+    <div id="marketplace-container" class="marketplace-container" style="display: none;">
+        <header>
+            <div class="user-header">
+                <div class="user-info">
+                    <span id="user-email-display">user@example.com</span>
+                    <button id="logout-btn" class="logout-btn">Logout</button>
+                </div>
+            </div>
+            <h1>Universal Marketplace</h1>
+            <p>Elevate your experience with our premium multi-platform services.</p>
+        </header>
+
+        <main class="products-grid">
+            <!-- Product Card 1 -->
+            <div class="product-card" data-name="Premium Subscription" data-price="49900">
+                <div class="card-badge">Bestseller</div>
+                <div class="card-icon">👑</div>
+                <h3>Premium Subscription</h3>
+                <p>Unlock all elite features, priority support, and exclusive content.</p>
+                <div class="price">₹499</div>
+                <button class="pay-btn">Get Started</button>
+            </div>
+
+            <!-- Product Card 2 -->
+            <div class="product-card" data-name="Pro Design Assets" data-price="99900">
+                <div class="card-icon">🎨</div>
+                <h3>Pro Design Assets</h3>
+                <p>High-quality UI kits, icons, and templates for your projects.</p>
+                <div class="price">₹999</div>
+                <button class="pay-btn">Purchase Now</button>
+            </div>
+
+            <!-- Product Card 3 -->
+            <div class="product-card" data-name="Cloud Storage (1TB)" data-price="129900">
+                <div class="card-icon">☁️</div>
+                <h3>Cloud Storage (1TB)</h3>
+                <p>Securely store and share your files with lightning fast speeds.</p>
+                <div class="price">₹1,299</div>
+                <button class="pay-btn">Upgrade Now</button>
+            </div>
+
+            <!-- Product Card 4 -->
+            <div class="product-card" data-name="Priority Support" data-price="29900">
+                <div class="card-icon">🤝</div>
+                <h3>Priority Support</h3>
+                <p>24/7 dedicated support for any technical or general queries.</p>
+                <div class="price">₹299</div>
+                <button class="pay-btn">Get Support</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="status-message" class="status-message"></div>
+
+    <!-- Razorpay Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
