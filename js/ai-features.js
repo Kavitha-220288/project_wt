@@ -64,26 +64,65 @@ window.startVoiceTracking = function() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { showToast('Speech Recognition not supported in this browser.', 'error'); return; }
 
-  const rec = new SR(); rec.lang = 'en-IN';
+  if (window.gRec) { try { window.gRec.stop(); } catch(e){} }
+  window.gRec = new SR(); 
+  const rec = window.gRec;
+  rec.lang = 'en-IN';
+  rec.interimResults = true; // 🎙️ Enable real-time transcription
   
-  rec.onresult = async (event) => {
-    const text = event.results[0][0].transcript;
-    const modal = document.querySelector('.modal');
-    if (modal) modal.classList.add('scanning');
+  const statusEl = document.getElementById('voiceStatus');
+  const textEl   = document.getElementById('voiceText');
+  const magicTools = document.getElementById('modalMagicTools');
+
+  rec.onstart = () => {
+    if (statusEl) statusEl.style.display = 'flex';
+    if (textEl)   textEl.textContent = 'Speak now...';
+    if (magicTools) magicTools.style.display = 'none'; // 🪄 Hide tools for cleaner UI
     
-    try {
-      const data = await callAIParse(text);
-      if (data && data.amount) {
-        fillExpenseForm(data);
-        showToast(`Heard ₹${data.amount}`, 'success');
-      }
-    } catch (e) {
-      console.error('Voice parse error:', e);
-      showToast('AI analysis failed.', 'error');
-    } finally {
-      if (modal) modal.classList.remove('scanning');
+    // Open modal if not open
+    if (typeof openModal === 'function' && !document.getElementById('modalOverlay').classList.contains('active')) {
+       openModal();
     }
   };
+
+  rec.onresult = async (event) => {
+    const transcript = Array.from(event.results)
+      .map(result => result[0])
+      .map(result => result.transcript)
+      .join('');
+
+    if (textEl) textEl.textContent = `"${transcript}"`;
+
+    if (event.results[0].isFinal) {
+      const modal = document.querySelector('.modal');
+      if (modal) modal.classList.add('scanning');
+      
+      try {
+        const data = await callAIParse(transcript);
+        if (data && data.amount) {
+          fillExpenseForm(data);
+          showToast(`Heard ₹${data.amount}`, 'success');
+        }
+      } catch (e) {
+        console.error('Voice parse error:', e);
+        showToast('AI analysis failed.', 'error');
+      } finally {
+        if (modal) modal.classList.remove('scanning');
+        if (statusEl) statusEl.style.display = 'none';
+        if (magicTools) magicTools.style.display = 'block'; // 🪄 Restore tools
+      }
+    }
+  };
+
+  rec.onerror = () => {
+    if (typeof window.stopAIActions === 'function') window.stopAIActions();
+    showToast('Voice error. Try again.', 'error');
+  };
+
+  rec.onend = () => {
+    // Keep scanning only if AI is still "thinking" (handled in onresult finally)
+  };
+  
   rec.start();
 };
 
@@ -96,14 +135,13 @@ window.processReceiptOCR = async function(file) {
   if (modal) modal.classList.add('scanning');
 
   try {
-    // ⚡ Compress with color preservation (Balanced for size/quality)
-    const base64 = await window.compressImage(file, 1000, 1000, 0.6);
+    // ⚡ Fast compression for quick uploads
+    const base64 = await window.compressImage(file, 800, 800, 0.5);
     const result = await callAIParse(null, base64, 'image/jpeg');
 
     if (result) {
       fillExpenseForm(result);
       showToast(`Scan Complete: ₹${result.amount || 'Found'} ✓`, 'success');
-      if (typeof window.triggerCoinBurst === 'function') window.triggerCoinBurst();
     } else {
       throw new Error("Could not extract data");
     }
@@ -114,6 +152,24 @@ window.processReceiptOCR = async function(file) {
     if (btn) btn.disabled = false;
     if (modal) modal.classList.remove('scanning');
   }
+};
+
+// ── 🛑 SAFETY STOP (Kill all active AI tasks) ──────────────────────
+window.stopAIActions = function() {
+  console.log('[AI] Stopping all active tasks...');
+  if (window.gRec) {
+    try { window.gRec.stop(); } catch(e){}
+    window.gRec = null;
+  }
+  
+  // Hide scanning UI
+  const statusEl = document.getElementById('voiceStatus');
+  const magicTools = document.getElementById('modalMagicTools');
+  if (statusEl) statusEl.style.display = 'none';
+  if (magicTools) magicTools.style.display = 'block';
+  
+  const modal = document.querySelector('.modal');
+  if (modal) modal.classList.remove('scanning');
 };
 
 // ── 🧠 SMART INSIGHTS ─────────────────────────────────────────────
@@ -272,33 +328,33 @@ function getTopCategory() {
 }
 
 // ── 📧 EMAIL ALERTS (AI-POWERED) ───────────────────────────────────
-let alertSent90 = false; 
-let initialCheckDone = false; 
-
 window.checkEmailAlerts = async function() {
   if (!gUser || !gUser.email) return; 
   
   const catTotals = getCatTotals();
   const total = Object.values(catTotals).reduce((a, b) => a + b, 0);
   const budget = (gData && gData.budget) || 0;
-  if (!budget) return;
+  if (!budget || budget <= 0) return;
 
   const pct = (total / budget) * 100;
+  const lastSentAmount = parseFloat(localStorage.getItem('last90AlertAmount_' + gUser.uid) || '0');
 
-  // 1. Critical 90% Alert (During active session)
+  // 🚨 90% Threshold Alert
   if (pct >= 90) {
-    if (!alertSent90 && initialCheckDone) {
-      alertSent90 = true;
+    // Only send if we haven't sent for THIS exact total (prevents spam on refresh)
+    // AND only if it's been a meaningful change or first time hitting 90%
+    if (total > lastSentAmount) {
+      localStorage.setItem('last90AlertAmount_' + gUser.uid, total);
       
       // a. Show Visual Banner
       const banner = document.getElementById('alertBanner');
       if (banner) {
         banner.classList.add('show');
-        setTimeout(() => banner.classList.remove('show'), 3000);
+        if (window.alertTimer) clearTimeout(window.alertTimer);
+        window.alertTimer = setTimeout(() => banner.classList.remove('show'), 3000);
       }
 
-      // b. Send Critical AI Email Alert
-      showToast('Budget Critical! Sending AI Alert Email...', 'warn');
+      // b. Send Email Alert (Silent failure to not disturb user flow)
       try {
         const content = await callAIGenEmail('critical', { 
           budget: budget, 

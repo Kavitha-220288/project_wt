@@ -63,14 +63,16 @@ app.post('/api/ai/parse', async (req, res) => {
   const orKey = process.env.OPENROUTER_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  const systemPrompt = `You are a financial scanner. Your task is to extract exact merchant details, amount, category, date, and any note into a JSON object.
+  const systemPrompt = `You are a professional financial assistant. Extract merchant details, amount, category, date, and a specific note into a JSON object.
   RULES:
-  1. MERCHANT: The store or company name.
-  2. AMOUNT: Just the numeric total (e.g., 500, not ₹500).
+  1. MERCHANT: The store, person, or company name.
+  2. AMOUNT: Numeric total only (e.g., 500).
   3. CATEGORY: Exactly one of: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Other.
   4. DATE: Format YYYY-MM-DD.
-  5. OUTPUT: Return ONLY the JSON object. Do not explain anything.
-  Schema: ${JSON.stringify(schema)}`;
+  5. NOTE: Only extract if it contains high-value context (e.g., "Gift for Mom", "Coffee with client"). 
+     ⚠️ IMPORTANT: Leave as an empty string "" if the text contains no useful extra context or just repeats information. 
+     🚫 DO NOT put generic text like "Bought coffee" or "Spent money" here.
+  6. OUTPUT: Return ONLY the raw JSON object. No explanations.`;
 
   const messages = [{ role: 'system', content: systemPrompt }];
   if (fileBase64) {
@@ -85,24 +87,30 @@ app.post('/api/ai/parse', async (req, res) => {
     messages.push({ role: 'user', content: `Text: "${txt}"` });
   }
 
-  // 🔄 THE INDESTRUCTIBLE ENGINE (Vision-Optimized)
-  const models = [
-    { provider: 'OR', id: 'nvidia/nemotron-nano-12b-v2-vl:free' },       // 🥇 Proven Vision Leader
-    { provider: 'OR', id: 'google/gemini-flash-1.5:free' },             // 🥈 Fast & Reliable Google
-    { provider: 'OR', id: 'meta-llama/llama-3.2-11b-vision-instruct:free' }, // 🥉 Meta Vision Expert
-    { provider: 'OR', id: 'qwen/qwen-2-vl-7b-instruct:free' }           // 🏅 Qwen VL Fallback
-  ];
+  // 🔄 THE INDESTRUCTIBLE ENGINE (Optimized for both Vision and Text)
+  const models = [];
+  
+  if (!fileBase64) {
+    // Top-tier Text Reasoners (Priority for Voice)
+    models.push({ provider: 'OR', id: 'google/gemini-2.0-flash-exp:free' });
+    models.push({ provider: 'OR', id: 'meta-llama/llama-3.3-70b-instruct:free' });
+    models.push({ provider: 'OR', id: 'deepseek/deepseek-chat:free' });
+  }
 
-  let lastError = null;
+  // Vision / Fallback Models
+  models.push({ provider: 'OR', id: 'nvidia/nemotron-nano-12b-v2-vl:free' });
+  models.push({ provider: 'OR', id: 'google/gemini-flash-1.5:free' });
+  models.push({ provider: 'OR', id: 'meta-llama/llama-3.2-11b-vision-instruct:free' });
+  models.push({ provider: 'OR', id: 'qwen/qwen-2-vl-7b-instruct:free' });
 
-  for (const m of models) {
+  // 🚀 PARALLEL RACE ENGINE (Fix for Latency)
+  // Hit top models simultaneously and take the first valid response.
+  const task = async (m) => {
     try {
-      console.log(`🚀 Attempting extraction with ${m.provider}:${m.id}...`);
       const isOR = m.provider === 'OR';
       const url = isOR ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
       const key = isOR ? orKey : groqKey;
-
-      if (!key) continue;
+      if (!key) throw new Error('No API Key');
 
       const response = await axios.post(url, {
         model: m.id,
@@ -113,29 +121,35 @@ app.post('/api/ai/parse', async (req, res) => {
           'Authorization': `Bearer ${key}`,
           ...(isOR ? { 'HTTP-Referer': 'http://localhost:3002', 'X-Title': 'Walletly' } : {})
         },
-        timeout: 20000
+        timeout: 12000 // Tight timeout for parallel race
       });
 
       const raw = response.data?.choices?.[0]?.message?.content;
       if (!raw) throw new Error('Empty response');
 
-      // Robust JSON Extraction
       const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('No JSON found in response');
+      if (!match) throw new Error('No JSON found');
 
-      const cleanJson = JSON.parse(match[0]);
-      console.log('✅ Extraction successful with:', m.id);
-      return res.json({ success: true, data: cleanJson });
-
+      const cleaned = JSON.parse(match[0]);
+      if (!cleaned.amount) throw new Error('Invalid schema');
+      
+      console.log('⚡ Parallel Winner:', m.id);
+      return cleaned;
     } catch (e) {
-      console.warn(`❌ Model ${m.id} failed:`, e.response?.data?.error?.message || e.message);
-      lastError = e;
-      continue; // Try next model
+      throw e;
     }
-  }
+  };
 
-  const finalError = lastError?.response?.data?.error?.message || lastError?.message || 'All AI providers failed';
-  res.status(500).json({ error: 'AI Failure', message: finalError });
+  // Select 3-4 best candidates to race
+  const candidates = models.slice(0, 4); 
+
+  try {
+    const winner = await Promise.any(candidates.map(m => task(m)));
+    return res.json({ success: true, data: winner });
+  } catch (err) {
+    console.error('📊 All models failed parallel race:', err.message);
+    return res.status(500).json({ success: false, message: 'AI exhausted all options.' });
+  }
 });
 
 // 💸 EXTERNAL PAYMENT SYNC (For cross-app Razorpay/Webhook sync)

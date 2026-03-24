@@ -5,32 +5,34 @@ var gUser = null;
 var gData = {};
 var gUserDoc = {}; // Original user data
 var gGroupDoc = {}; // Original group data
-var gExpenses   = [];   
-var gMyExpenses = [];   
+var gExpenses = [];
+var gMyExpenses = [];
 var gChart = null;
 var gEditId = null;
-var gDashboardInit = false; 
+var gDashboardInit = false;
 var gListener = null; // Store the current listener reference
 
-var gViewMode = localStorage.getItem('viewMode') || 'personal'; 
+var gViewMode = localStorage.getItem('viewMode') || 'personal';
 
-window.toggleViewMode = function() {
+window.toggleViewMode = function () {
   if (!gUserDoc || !gUserDoc.groupId) {
     showToast('Join a group first!', 'info');
     return;
   }
-  
+
   window.gViewMode = (window.gViewMode === 'personal' ? 'group' : 'personal');
   gViewMode = window.gViewMode;
   localStorage.setItem('viewMode', window.gViewMode);
   showToast('Showing ' + window.gViewMode + ' dashboard', 'info');
-  
+
   // Ensure we update global data and labels
   if (typeof syncDashboardData === 'function') {
     syncDashboardData();
+    loadExpenses(); // 🔄 Re-trigger real-time sync for the NEW mode (Personal vs Group)
   } else {
     updateModeUI();
-    renderOverview();
+    renderStats();
+    loadExpenses();
   }
 
   // Relistens to expenses with the new filter
@@ -39,7 +41,7 @@ window.toggleViewMode = function() {
   switchTab('overview');
 };
 
-window.toggleProfileMenu = function(e, forceClose) {
+window.toggleProfileMenu = function (e, forceClose) {
   if (e && e.stopPropagation) e.stopPropagation();
   const menu = document.getElementById('profileMenu');
   if (!menu) return;
@@ -55,7 +57,7 @@ function updateModeUI() {
   const toggle = document.getElementById('modeToggle');
   const label = document.getElementById('modeLabel');
   const dot = document.getElementById('modeDot');
-  
+
   if (badge) {
     badge.textContent = gViewMode;
     badge.className = 'page-mode-badge ' + gViewMode;
@@ -91,16 +93,16 @@ window.switchTab = function (tabId) {
   var pane = document.getElementById('tab-' + tabId);
   if (pane) pane.classList.add('active');
 
-  if (tabId === 'overview')     renderOverview();
+  if (tabId === 'overview') renderOverview();
   if (tabId === 'all-expenses') renderAllExpenses();
-  if (tabId === 'my-expenses')  renderMyExpenses();
-  if (tabId === 'profile')      renderProfile();
+  if (tabId === 'my-expenses') renderMyExpenses();
+  if (tabId === 'profile') renderProfile();
 
   // 🧹 Ensure Sidebar Profile Menu closes whenever we switch tabs
   window.toggleProfileMenu(null, true);
 };
 
-window.toggleGroupSync = function(checkbox) {
+window.toggleGroupSync = function (checkbox) {
   if (!gUser) return;
   const isEnabled = checkbox.checked;
   window.fbFS.collection('users').doc(gUser.uid).update({
@@ -112,16 +114,16 @@ window.toggleGroupSync = function(checkbox) {
 
 function renderProfile() {
   if (!gUser || !gData) return;
-  
-  setTxt('profName',   gUserDoc.name || 'User');
-  setTxt('profEmail',  gUser.email);
+
+  setTxt('profName', gUserDoc.name || 'User');
+  setTxt('profEmail', gUser.email);
   setTxt('profBudget', (gData.symbol || '₹') + fmt(gData.budget || 0));
 
   const syncToggle = document.getElementById('syncToGroupToggle');
   if (syncToggle) {
     syncToggle.checked = !!gUserDoc.syncToGroup;
   }
-  
+
   const av = document.getElementById('profAvatar');
   if (av) av.textContent = (gUserDoc.name || gUser.email || 'U').charAt(0).toUpperCase();
 
@@ -130,7 +132,7 @@ function renderProfile() {
     modeBadge.textContent = gViewMode.charAt(0).toUpperCase() + gViewMode.slice(1);
     modeBadge.className = 'page-mode-badge ' + gViewMode;
   }
-  
+
   const switchBtn = document.getElementById('profSwitchBtn');
   if (switchBtn) {
     switchBtn.style.display = (gUserDoc && gUserDoc.groupId) ? 'inline-block' : 'none';
@@ -173,10 +175,10 @@ window.openModal = function (editId) {
   if (gEditId) {
     var exp = gExpenses.find(function (e) { return e.id === gEditId; });
     if (exp) {
-      document.getElementById('expTitle').value  = exp.title    || '';
-      document.getElementById('expAmount').value = exp.amount   || '';
-      document.getElementById('expCat').value    = exp.category || '';
-      document.getElementById('expNote').value   = exp.note     || '';
+      document.getElementById('expTitle').value = exp.title || '';
+      document.getElementById('expAmount').value = exp.amount || '';
+      document.getElementById('expCat').value = exp.category || '';
+      document.getElementById('expNote').value = exp.note || '';
       if (df) df.value = exp.date || '';
     }
     setTxt('modalTitle', 'Edit Expense');
@@ -185,7 +187,7 @@ window.openModal = function (editId) {
     setTxt('modalTitle', 'Add Expense');
     setTxt('saveExpBtn', 'Save Expense');
   }
-  
+
   // ALWAYS re-enable the button when opening
   var btn = document.getElementById('saveExpBtn');
   if (btn) btn.disabled = false;
@@ -194,6 +196,7 @@ window.openModal = function (editId) {
 };
 
 window.closeModal = function () {
+  if (typeof window.stopAIActions === 'function') window.stopAIActions();
   var overlay = document.getElementById('modalOverlay');
   if (overlay) overlay.classList.remove('open');
   gEditId = null;
@@ -203,11 +206,11 @@ window.closeModal = function () {
 window.saveExpense = function () {
   if (!gUser) { showToast('Not signed in', 'error'); return; }
 
-  var title  = (document.getElementById('expTitle').value  || '').trim();
+  var title = (document.getElementById('expTitle').value || '').trim();
   var amount = parseFloat(document.getElementById('expAmount').value);
-  var cat    = document.getElementById('expCat').value;
-  var date   = document.getElementById('expDate').value;
-  var note   = (document.getElementById('expNote').value   || '').trim();
+  var cat = document.getElementById('expCat').value;
+  var date = document.getElementById('expDate').value;
+  var note = (document.getElementById('expNote').value || '').trim();
 
   if (!title || isNaN(amount) || amount <= 0 || !cat || !date) {
     showToast('Fill in all required fields', 'error');
@@ -218,17 +221,17 @@ window.saveExpense = function () {
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
   var payload = {
-    title:       title,
-    amount:      amount,
-    category:    cat,
-    date:        date,
-    note:        note,
-    createdBy:   gUser.uid,
-    userEmail:   gUser.email || '',
+    title: title,
+    amount: amount,
+    category: cat,
+    date: date,
+    note: note,
+    createdBy: gUser.uid,
+    userEmail: gUser.email || '',
     addedByName: gUserDoc.name || (gUser.email || '').split('@')[0],
-    groupId:     (gViewMode === 'group') ? (gData.id || null) : null,
-    groupName:   (gViewMode === 'group') ? (gData.name || null) : null,
-    createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+    groupId: (gViewMode === 'group') ? (gData.id || null) : null,
+    groupName: (gViewMode === 'group') ? (gData.name || null) : null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
   var col = window.fbFS.collection('expenses');
@@ -237,10 +240,10 @@ window.saveExpense = function () {
     delete payload.createdAt;
     payload.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     col.doc(gEditId).update(payload)
-      .then(function () { 
-        window.closeModal(); 
-        showToast('Updated ✓', 'success'); 
-        if(window.triggerBurst) window.triggerBurst(); 
+      .then(function () {
+        window.closeModal();
+        showToast('Updated ✓', 'success');
+        if (window.triggerCoinFly) window.triggerCoinFly();
       })
       .catch(function (e) {
         showToast(e.message, 'error');
@@ -251,8 +254,8 @@ window.saveExpense = function () {
       .then(function (ref) {
         window.closeModal();
         showToast('Expense added ✓', 'success');
-        if(window.triggerBurst) window.triggerBurst();
-        
+        if (window.triggerCoinFly) window.triggerCoinFly();
+
         // 🔔 Add Activity Notification
         window.fbFS.collection('notifications').add({
           userId: gUser.uid,
@@ -281,9 +284,9 @@ window.requireAuth(async function (user, data) {
 
   // 🛡️ IDEMPOTENCY: Only run heavy initialization ONCE on load.
   if (gIsDashboardActive) {
-     const syncFn = window.syncDashboardData; // Reference the existing sync logic
-     if (typeof syncFn === 'function') syncFn();
-     return;
+    const syncFn = window.syncDashboardData; // Reference the existing sync logic
+    if (typeof syncFn === 'function') syncFn();
+    return;
   }
   gIsDashboardActive = true;
 
@@ -303,17 +306,17 @@ window.requireAuth(async function (user, data) {
       if (gGroupDoc && gGroupDoc.name) {
         gData = { ...gGroupDoc, type: 'group' };
         const gl = document.getElementById('groupNameLabel');
-        if (gl) { 
-          gl.textContent = '👨‍👩‍👧‍👦 ' + (gData.name || 'Group'); 
-          gl.style.display = 'inline-flex'; 
+        if (gl) {
+          gl.textContent = '👨‍👩‍👧‍👦 ' + (gData.name || 'Group');
+          gl.style.display = 'inline-flex';
         }
       } else {
         // Still waiting for group data. Show placeholder.
         gData = { name: 'Loading...', type: 'group' };
         const gl = document.getElementById('groupNameLabel');
-        if (gl) { 
-          gl.textContent = '👨‍👩‍👧‍👦 Loading Group...'; 
-          gl.style.display = 'inline-flex'; 
+        if (gl) {
+          gl.textContent = '👨‍👩‍👧‍👦 Loading Group...';
+          gl.style.display = 'inline-flex';
         }
       }
     } else {
@@ -325,7 +328,7 @@ window.requireAuth(async function (user, data) {
 
     updateModeUI();
     renderStats();
-    
+
     // Only render full tab content after initial load completes
     if (gDashboardInit) {
       renderOverview();
@@ -341,10 +344,10 @@ window.requireAuth(async function (user, data) {
         if (snap.exists) {
           gGroupDoc = { ...snap.data(), id: snap.id };
           syncDashboardData(); // Update when group changes
-          
+
           // If this is the FIRST time we get group data and we are in group mode, finish init
           if (!gDashboardInit && gViewMode === 'group') {
-             finishDashboardLoading();
+            finishDashboardLoading();
           }
         }
       });
@@ -358,7 +361,7 @@ window.requireAuth(async function (user, data) {
   const finishDashboardLoading = () => {
     if (gDashboardInit) return;
     gDashboardInit = true;
-    
+
     // Set date string
     var ds = document.getElementById('dateStr');
     if (ds) ds.textContent = new Date().toLocaleDateString('en-IN', {
@@ -371,7 +374,7 @@ window.requireAuth(async function (user, data) {
     });
 
     // UI Click listeners (dropdowns etc)
-    window.addEventListener('click', function(e) {
+    window.addEventListener('click', function (e) {
       ['chatbotWrap', 'notifDropdown', 'profileMenu'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.classList.contains('show') && !el.contains(e.target)) {
@@ -382,25 +385,25 @@ window.requireAuth(async function (user, data) {
         }
       });
     });
-    
+
     listenForInvitations(); // 🔔 Start notification sync on login
     loadExpenses(); // Start syncing data records
   };
 
   // 🎯 Execution Flow
   syncDashboardData();
-  
+
   // If we are in Personal mode, we can finish init immediately
   if (gViewMode === 'personal') {
     finishDashboardLoading();
-  } 
+  }
   // If we are in Group mode, finishDashboardLoading() will be called by the Group Snapshot listener above
 });
 
 // ─── Load Expenses (Atomic Filtered Sync) ───────────────────────────────────
 function loadExpenses() {
   if (!gUser) return;
-  
+
   // 🧹 CLEAN UP OLD LISTENER FIRST
   if (gListener) {
     console.log('[loadExpenses] Detaching old listener...');
@@ -421,14 +424,14 @@ function loadExpenses() {
   // Store the unsubscribe function to gListener
   gListener = query.onSnapshot(
     function (snap) {
-      gExpenses   = [];
+      gExpenses = [];
       gMyExpenses = [];
 
       snap.forEach(function (doc) {
         var exp = Object.assign({ id: doc.id }, doc.data());
 
-        var isMine   = exp.createdBy === gUser.uid;
-        var inGroup  = !!(gData.groupId && exp.groupId && exp.groupId === gData.groupId);
+        var isMine = exp.createdBy === gUser.uid;
+        var inGroup = !!(gData.groupId && exp.groupId && exp.groupId === gData.groupId);
 
         if (isMine || inGroup) {
           gExpenses.push(exp);
@@ -441,7 +444,7 @@ function loadExpenses() {
       console.log('[loadExpenses] After filter → gExpenses:', gExpenses.length, ' gMyExpenses:', gMyExpenses.length);
 
       // Sort newest date first. If dates equal, use createdAt for sub-sort
-      var byDate = function (a, b) { 
+      var byDate = function (a, b) {
         var dateCompare = (b.date || '').localeCompare(a.date || '');
         if (dateCompare !== 0) return dateCompare;
         var timeA = a.createdAt?.seconds || 0;
@@ -460,7 +463,7 @@ function loadExpenses() {
       if (activeBtn) {
         var tid = activeBtn.getAttribute('data-tab');
         if (tid === 'all-expenses') renderAllExpenses();
-        if (tid === 'my-expenses')  renderMyExpenses();
+        if (tid === 'my-expenses') renderMyExpenses();
       }
     },
     function (err) {
@@ -472,15 +475,15 @@ function loadExpenses() {
 
 // ─── Render Stats ─────────────────────────────────────────────────────────────
 function renderStats() {
-  var sym    = gData.symbol || '₹';
+  var sym = gData.symbol || '₹';
   var budget = Number(gData.budget) || 0;
-  var total  = gExpenses.reduce(function (s, e) { return s + Number(e.amount || 0); }, 0);
-  var left   = budget - total;
+  var total = gExpenses.reduce(function (s, e) { return s + Number(e.amount || 0); }, 0);
+  var left = budget - total;
 
-  setTxt('sBudget',    sym + fmt(budget));
-  setTxt('sSpent',     sym + fmt(total));
+  setTxt('sBudget', sym + fmt(budget));
+  setTxt('sSpent', sym + fmt(total));
   setTxt('sRemaining', sym + fmt(Math.abs(left)));
-  setTxt('sCount',     gExpenses.length);
+  setTxt('sCount', gExpenses.length);
 
   // 🚨 Exceed Label Logic
   const remValueEl = document.getElementById('sRemaining');
@@ -496,8 +499,8 @@ function renderStats() {
   }
 
   var pct = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
-  var pf  = document.getElementById('progressFill');
-  var pb  = document.getElementById('pctBadge');
+  var pf = document.getElementById('progressFill');
+  var pb = document.getElementById('pctBadge');
   if (pf) {
     pf.style.width = pct.toFixed(1) + '%';
     pf.classList.remove('warn', 'danger');
@@ -514,7 +517,7 @@ function renderStats() {
         ab.classList.add('show');
         // Clear any existing timeout and set a new one for 3s
         if (window.alertTimer) clearTimeout(window.alertTimer);
-        window.alertTimer = setTimeout(function() {
+        window.alertTimer = setTimeout(function () {
           ab.classList.remove('show');
         }, 3000);
       }
@@ -525,7 +528,7 @@ function renderStats() {
   }
 
   setTxt('pSpent', sym + fmt(total) + ' spent');
-  setTxt('pLeft',  sym + fmt(Math.max(0, left)) + ' left');
+  setTxt('pLeft', sym + fmt(Math.max(0, left)) + ' left');
 
   // Check AI Alerts (90% threshold, reports, etc)
   if (typeof window.checkEmailAlerts === 'function') {
@@ -553,7 +556,7 @@ function renderOverview() {
 function renderAllExpenses() {
   if (window.filterList) window.filterList('all');
   else renderList('allExpenseList', gExpenses);
-  
+
   var el = document.getElementById('allExpTotal');
   if (el) el.textContent = (gData.symbol || '₹') + fmt(gExpenses.reduce(function (s, e) { return s + Number(e.amount || 0); }, 0));
 }
@@ -568,12 +571,12 @@ function renderMyExpenses() {
 }
 
 // ─── Filter Lists ─────────────────────────────────────────────────────────────
-window.filterList = function(type) {
+window.filterList = function (type) {
   var searchText = '';
   var catValue = '';
   var listToFilter = [];
   var listContainerId = '';
-  
+
   if (type === 'all') {
     searchText = (document.getElementById('searchAll').value || '').toLowerCase().trim();
     catValue = document.getElementById('catFilterAll').value || '';
@@ -588,7 +591,7 @@ window.filterList = function(type) {
     return;
   }
 
-  var filtered = listToFilter.filter(function(e) {
+  var filtered = listToFilter.filter(function (e) {
     if (catValue && e.category !== catValue) return false;
     if (searchText && !(e.title || '').toLowerCase().includes(searchText)) return false;
     return true;
@@ -607,8 +610,8 @@ function renderList(containerId, items) {
   if (!items || items.length === 0) {
     box.innerHTML =
       '<div class="empty-state">' +
-        '<div class="empty-icon">🧾</div>' +
-        '<p>No expenses yet.<br>Tap <strong>+ Add Expense</strong> to get started.</p>' +
+      '<div class="empty-icon">🧾</div>' +
+      '<p>No expenses yet.<br>Tap <strong>+ Add Expense</strong> to get started.</p>' +
       '</div>';
     return;
   }
@@ -622,20 +625,21 @@ function renderList(containerId, items) {
     row.innerHTML =
       '<div class="exp-icon">' + catIcon(e.category) + '</div>' +
       '<div class="exp-info">' +
-        '<div class="exp-title">' + 
-          esc(e.title) + 
-          (isSync ? ' <span class="sync-pill">Synced</span>' : '') + 
-        '</div>' +
-        '<div class="exp-meta">' +
-          esc(e.category || 'Other') + ' &bull; ' + (e.date || '—') +
-          (e.addedByName ? ' &bull; ' + esc(e.addedByName) : '') +
-          (isSync ? ' &bull; 🔗 Sync' : '') +
-        '</div>' +
+      '<div class="exp-title">' +
+      esc(e.title) +
+      (isSync ? ' <span class="sync-pill">Synced</span>' : '') +
+      '</div>' +
+      '<div class="exp-meta">' +
+      esc(e.category || 'Other') + ' &bull; ' + (e.date || '—') +
+      (e.addedByName ? ' &bull; ' + esc(e.addedByName) : '') +
+      (isSync ? ' &bull; 🔗 Sync' : '') +
+      (e.note ? '<div class="exp-note-text">📝 ' + esc(e.note) + '</div>' : '') +
+      '</div>' +
       '</div>' +
       '<div class="exp-amount">' + sym + fmt(e.amount) + '</div>' +
       '<div class="exp-actions">' +
-        '<button class="exp-btn"     onclick="openModal(\'' + e.id + '\')" title="Edit">✏️</button>' +
-        '<button class="exp-btn del" onclick="deleteExpense(\'' + e.id + '\')" title="Delete">🗑️</button>' +
+      '<button class="exp-btn"     onclick="openModal(\'' + e.id + '\')" title="Edit">✏️</button>' +
+      '<button class="exp-btn del" onclick="deleteExpense(\'' + e.id + '\')" title="Delete">🗑️</button>' +
       '</div>';
     box.appendChild(row);
   });
@@ -651,20 +655,20 @@ function renderCatBreakdown(totals) {
   if (!cats.length) return;
 
   var grandTotal = cats.reduce(function (s, c) { return s + totals[c]; }, 0);
-  var palette    = ['#6366f1', '#f87171', '#34d399', '#f0b429', '#a78bfa', '#fb923c'];
+  var palette = ['#6366f1', '#f87171', '#34d399', '#f0b429', '#a78bfa', '#fb923c'];
 
   cats.forEach(function (cat, i) {
-    var pct   = grandTotal > 0 ? Math.round(totals[cat] / grandTotal * 100) : 0;
+    var pct = grandTotal > 0 ? Math.round(totals[cat] / grandTotal * 100) : 0;
     var color = palette[i % palette.length];
-    var row   = document.createElement('div');
+    var row = document.createElement('div');
     row.className = 'cat-bar-item';
     row.innerHTML =
       '<div class="cat-bar-label">' +
-        '<span>' + catIcon(cat) + ' ' + cat + '</span>' +
-        '<span class="cat-amt">₹' + fmt(totals[cat]) + '</span>' +
+      '<span>' + catIcon(cat) + ' ' + cat + '</span>' +
+      '<span class="cat-amt">₹' + fmt(totals[cat]) + '</span>' +
       '</div>' +
       '<div class="cat-mini-bg">' +
-        '<div class="cat-mini-fill" style="width:' + pct + '%;background:' + color + '"></div>' +
+      '<div class="cat-mini-fill" style="width:' + pct + '%;background:' + color + '"></div>' +
       '</div>';
     container.appendChild(row);
   });
@@ -685,7 +689,7 @@ function updateDonutChart(totals) {
       labels: labels,
       datasets: [{
         data: Object.values(totals),
-        backgroundColor: ['#6366f1','#f87171','#34d399','#f0b429','#a78bfa','#fb923c'],
+        backgroundColor: ['#6366f1', '#f87171', '#34d399', '#f0b429', '#a78bfa', '#fb923c'],
         borderWidth: 0
       }]
     },
@@ -717,7 +721,7 @@ window.respondInvite = function (invId, status, groupId) {
       } else {
         showToast('Invite ' + status, '');
       }
-      
+
       // Close dropdown
       const d = document.getElementById('notifDropdown');
       if (d) d.classList.remove('show');
@@ -746,6 +750,6 @@ function esc(s) {
 }
 
 function catIcon(cat) {
-  var m = { Food:'🍔', Travel:'🚗', Shopping:'🛍', Bills:'💡', Entertainment:'🎬', Health:'❤️', Education:'📚', Other:'📦' };
+  var m = { Food: '🍔', Travel: '🚗', Shopping: '🛍', Bills: '💡', Entertainment: '🎬', Health: '❤️', Education: '📚', Other: '📦' };
   return m[cat] || '📦';
 }

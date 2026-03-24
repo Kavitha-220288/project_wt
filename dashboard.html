@@ -697,24 +697,94 @@
     .coin-4 { top: 75%; right: 15%; animation-delay: 4.5s; font-size: 1rem; }
     .coin-5 { top: 45%; left: 45%;  animation-delay: 6s; opacity: 0.1; }
 
-    /* 🪙 COIN BURST (on success) */
-    .coin-burst {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      pointer-events: none;
-      z-index: 3000;
-      display: none;
+
+    /* 🎙️ Voice UI */
+    .voice-indicator {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1.5px dashed var(--primary);
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1.25rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      animation: indicatorPulse 2s infinite ease-in-out;
     }
-    .coin-burst.active { display: block; }
-    .burst-piece {
+    .mic-glow {
+      width: 42px; height: 42px;
+      background: var(--primary);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+      font-size: 1.2rem;
+      position: relative;
+    }
+    .mic-glow::before {
+      content: '🎙️';
       position: absolute;
-      font-size: 1.5rem;
-      animation: burstAnim 0.8s ease-out forwards;
     }
-    @keyframes burstAnim {
-      0% { transform: translate(0, 0) scale(0); opacity: 1; }
-      100% { transform: translate(var(--x), var(--y)) scale(1.2) rotate(360deg); opacity: 0; }
+    .mic-glow::after {
+      content: '';
+      position: absolute;
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      animation: ripple 1.5s infinite;
+    }
+    .voice-transcription {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-align: center;
+      font-style: italic;
+      min-height: 1.2rem;
+    }
+    .voice-hint {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    @keyframes indicatorPulse {
+      0%, 100% { border-color: rgba(99, 102, 241, 0.4); background: rgba(99, 102, 241, 0.05); }
+      50% { border-color: var(--primary); background: rgba(99, 102, 241, 0.12); }
+    }
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .scanning { position: relative; overflow: hidden; }
+    .scanning::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--primary);
+      animation: scanAnim 2s infinite ease-in-out;
+      box-shadow: 0 0 10px var(--primary);
+      z-index: 100;
+    }
+    .flying-coin {
+      position: fixed;
+      font-size: 1.4rem;
+      pointer-events: none;
+      z-index: 9999;
+      transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+    }
+    .exp-note-text {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      font-size: 0.76rem;
+      color: #71717a;
+      font-style: italic;
+      transition: all 0.3s ease;
+      margin-top: 0;
+    }
+    .expense-item:hover .exp-note-text {
+      max-height: 40px;
+      opacity: 1;
+      margin-top: 6px;
     }
     .alert-banner p { font-size: 0.9rem; margin: 0; opacity: 0.9; }
   </style>
@@ -729,11 +799,11 @@
       <span class="brand-name">FinBuddy</span>
     </div>
     <nav class="sidebar-nav">
-      <a href="dashboard.html" class="nav-item active">Dashboard</a>
-      <a href="analytics.html" class="nav-item">Analytics</a>
-      <a href="reports.html" class="nav-item">Reports</a>
-      <a href="groups.html" class="nav-item">Family Groups</a>
-      <a href="settings.html" class="nav-item">Settings</a>
+      <a href="javascript:void(0)" class="nav-item active" data-tab="dashboard" onclick="switchTab('overview')">Dashboard</a>
+      <a href="javascript:void(0)" class="nav-item" data-tab="analytics" onclick="switchTab('analytics')">Analytics</a>
+      <a href="javascript:void(0)" class="nav-item" data-tab="reports" onclick="switchTab('reports')">Reports</a>
+      <a href="javascript:void(0)" class="nav-item" data-tab="groups" onclick="switchTab('groups')">Family Groups</a>
+      <a href="javascript:void(0)" class="nav-item" data-tab="settings" onclick="switchTab('settings')">Settings</a>
     </nav>
     <div class="sidebar-footer">
       <div class="profile-menu" id="profileMenu">
@@ -830,14 +900,14 @@
 
       <!-- Stat cards -->
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card" id="cardBudget">
           <div class="sc-icon" style="background:rgba(91,124,250,.12);color:var(--accent)">💰</div>
           <div>
             <div class="sc-label">Monthly Budget</div>
             <div class="sc-value" id="sBudget">—</div>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" id="cardSpent">
           <div class="sc-icon" style="background:rgba(248,113,113,.12);color:var(--danger)">💸</div>
           <div>
             <div class="sc-label">Total Spent</div>
@@ -1075,7 +1145,7 @@
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="modal-ai-tools">
+        <div class="modal-ai-tools" id="modalMagicTools">
           <span class="tool-label">✨ Magic Tools</span>
           <div class="tool-buttons">
             <button class="tool-btn" onclick="startVoiceTracking()">🎙️ Voice Entry</button>
@@ -1084,8 +1154,13 @@
               onchange="processReceiptOCR(this.files[0])">
           </div>
         </div>
+        <div class="voice-indicator" id="voiceStatus" style="display: none;">
+          <div class="mic-glow"></div>
+          <div class="voice-transcription" id="voiceText">"I spent ₹500 on coffee today..."</div>
+          <div class="voice-hint">Try saying: "I spent 200 on grocery today"</div>
+        </div>
         <div class="field">
-          <label>Title *</label>
+          <label>Item / Title *</label>
           <input type="text" id="expTitle" placeholder="e.g. Lunch at Café" />
         </div>
         <div class="field-row">
@@ -1127,26 +1202,52 @@
   <div class="toast" id="toast"></div>
 
 
-  <div class="coin-burst" id="coinBurst"></div>
 
   <script>
-    window.triggerBurst = function() {
-      const b = document.getElementById('coinBurst');
-      if(!b) return;
-      b.innerHTML = '';
-      b.classList.add('active');
-      const icons = ['🪙','💰','✨','💵','⚡️'];
-      for(let i=0; i<12; i++) {
-        const p = document.createElement('div');
-        p.className = 'burst-piece';
-        const rx = (Math.random() - 0.5) * 400;
-        const ry = (Math.random() - 0.5) * 400;
-        p.style.setProperty('--x', `${rx}px`);
-        p.style.setProperty('--y', `${ry}px`);
-        p.textContent = icons[Math.floor(Math.random()*icons.length)];
-        b.appendChild(p);
+    /* 🪙 BUDGET -> EXPENSE FLYING COINS */
+    window.triggerCoinFly = function() {
+      const budget = document.getElementById('cardBudget');
+      const spent = document.getElementById('cardSpent');
+      if (!budget || !spent) return;
+
+      const start = budget.getBoundingClientRect();
+      const end = spent.getBoundingClientRect();
+
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          const coin = document.createElement('div');
+          coin.className = 'flying-coin';
+          coin.textContent = ['🪙', '💰', '✨', '💵'][Math.floor(Math.random() * 4)];
+          
+          // Start at budget card center
+          const sx = start.left + start.width / 2;
+          const sy = start.top + start.height / 2;
+          
+          coin.style.left = (sx - 10) + 'px';
+          coin.style.top = (sy - 10) + 'px';
+          coin.style.opacity = '0';
+          coin.style.transform = 'scale(0) rotate(0deg)';
+          
+          document.body.appendChild(coin);
+
+          // Animate to spent card
+          requestAnimationFrame(() => {
+            coin.style.opacity = '1';
+            coin.style.transform = 'scale(1.5) rotate(360deg)';
+            const ex = end.left + end.width / 2;
+            const ey = end.top + end.height / 2;
+            coin.style.left = (ex - 10) + 'px';
+            coin.style.top = (ey - 10) + 'px';
+          });
+
+          // Secondary pop at end
+          setTimeout(() => {
+            coin.style.opacity = '0';
+            coin.style.transform = 'scale(2) rotate(720deg)';
+            setTimeout(() => coin.remove(), 400);
+          }, 800);
+        }, i * 120);
       }
-      setTimeout(() => b.classList.remove('active'), 1000);
     }
   </script>
 
