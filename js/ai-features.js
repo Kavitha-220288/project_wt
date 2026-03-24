@@ -1,7 +1,7 @@
 // js/ai-features.js
 
 // ── Voice Tracking ──
-window.startVoiceTracking = function() {
+window.startVoiceTracking = function () {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     showToast('Speech Recognition not supported in this browser.', 'error');
@@ -14,13 +14,13 @@ window.startVoiceTracking = function() {
 
   showToast('Listening... e.g., "Add 500 for food"', 'success');
 
-  recognition.onresult = function(event) {
+  recognition.onresult = function (event) {
     const text = event.results[0][0].transcript;
     showToast('Heard: ' + text, '');
     processVoiceCommand(text);
   };
 
-  recognition.onerror = function(event) {
+  recognition.onerror = function (event) {
     showToast('Voice error: ' + event.error, 'error');
   };
 
@@ -31,17 +31,38 @@ function processVoiceCommand(text) {
   // Regex to extract amount and category
   // e.g., "Add 200 rupees for food", "spent 50 on travel"
   const amountMatch = text.match(/(\d+)/);
-  const categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Education', 'Other'];
+  const lowerText = text.toLowerCase();
+
+  const keywordMap = {
+    'food': 'Food', 'zomato': 'Food', 'swiggy': 'Food', 'restaurant': 'Food', 'dinner': 'Food', 'lunch': 'Food', 'breakfast': 'Food', 'grocery': 'Food', 'groceries': 'Food', 'pizza': 'Food', 'burger': 'Food',
+    'travel': 'Travel', 'uber': 'Travel', 'ola': 'Travel', 'bus': 'Travel', 'train': 'Travel', 'flight': 'Travel', 'ticket': 'Travel', 'cab': 'Travel', 'auto': 'Travel', 'petrol': 'Travel', 'fuel': 'Travel',
+    'shopping': 'Shopping', 'clothes': 'Shopping', 'shirt': 'Shopping', 'shoes': 'Shopping', 'amazon': 'Shopping', 'flipkart': 'Shopping', 'mall': 'Shopping', 'myntra': 'Shopping', 'dress': 'Shopping',
+    'bills': 'Bills', 'electricity': 'Bills', 'water': 'Bills', 'internet': 'Bills', 'wifi': 'Bills', 'recharge': 'Bills', 'mobile': 'Bills', 'phone': 'Bills', 'rent': 'Bills',
+    'entertainment': 'Entertainment', 'movie': 'Entertainment', 'cinema': 'Entertainment', 'netflix': 'Entertainment', 'prime': 'Entertainment', 'games': 'Entertainment', 'concert': 'Entertainment',
+    'health': 'Health', 'doctor': 'Health', 'medicine': 'Health', 'pharmacy': 'Health', 'hospital': 'Health', 'clinic': 'Health', 'medical': 'Health',
+    'education': 'Education', 'school': 'Education', 'college': 'Education', 'books': 'Education', 'stationery': 'Education', 'course': 'Education', 'tuition': 'Education', 'fees': 'Education'
+  };
+
   let foundCat = 'Other';
 
-  categories.forEach(cat => {
-    if (text.toLowerCase().includes(cat.toLowerCase())) foundCat = cat;
-  });
+  for (const [keyword, category] of Object.entries(keywordMap)) {
+    if (lowerText.includes(keyword)) {
+      foundCat = category;
+      break;
+    }
+  }
+
+  if (foundCat === 'Other') {
+    const categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Education', 'Other'];
+    categories.forEach(cat => {
+      if (lowerText.includes(cat.toLowerCase())) foundCat = cat;
+    });
+  }
 
   if (amountMatch) {
     const amount = amountMatch[1];
     const title = text.length > 20 ? text.substring(0, 20) + '...' : text;
-    
+
     // Auto-open modal with values
     openModal();
     document.getElementById('expTitle').value = 'Voice: ' + title;
@@ -54,11 +75,11 @@ function processVoiceCommand(text) {
 }
 
 // ── Receipt OCR ──
-window.processReceiptOCR = function(file) {
+window.processReceiptOCR = function (file) {
   if (!file) return;
-  
+
   showToast('Scanning receipt... Please wait', 'success');
-  
+
   Tesseract.recognize(file, 'eng', {
     logger: m => console.log(m)
   }).then(({ data: { text } }) => {
@@ -101,11 +122,11 @@ function extractReceiptData(text) {
 }
 
 // ── Chatbot ──
-window.toggleChat = function() {
+window.toggleChat = function () {
   document.getElementById('chatbotWrap').classList.toggle('open');
 };
 
-window.sendChat = function() {
+window.sendChat = function () {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
@@ -164,6 +185,6 @@ function handleChatResponse(text) {
 function getTopCategory() {
   const catTotals = {};
   gExpenses.forEach(e => { catTotals[e.category] = (catTotals[e.category] || 0) + Number(e.amount); });
-  const sorted = Object.entries(catTotals).sort((a,b) => b[1] - a[1]);
+  const sorted = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
   return sorted.length > 0 ? sorted[0][0] : null;
 }
