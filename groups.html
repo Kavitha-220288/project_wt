@@ -326,6 +326,17 @@
       justify-content: center;
       border: 2px solid var(--bg);
     }
+    .group-header-info { cursor: pointer; transition: 0.2s; position: relative; }
+    .group-header-info:hover { background: rgba(255,255,255,0.02); }
+    .expand-icon { margin-left: auto; font-size: 1.2rem; transform: rotate(0deg); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .expand-icon.expanded { transform: rotate(180deg); }
+    .group-details-body { display: none; margin-top: 1rem; }
+    .group-details-body.show { display: block; animation: slideDown 0.4s ease forwards; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 
@@ -337,20 +348,38 @@
     </div>
     <nav class="sidebar-nav">
       <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="dashboard.html?tab=chat" class="nav-item">Group Chat</a>
       <a href="analytics.html" class="nav-item">Analytics</a>
       <a href="reports.html" class="nav-item">Reports</a>
       <a href="groups.html" class="nav-item active">Family Groups</a>
       <a href="settings.html" class="nav-item">Settings</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info">
+      <div class="profile-menu" id="profileMenu">
+        <div class="menu-item" onclick="window.location.href='dashboard.html#profile'; toggleProfileMenu()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>My Profile</span>
+        </div>
+        <!-- Switch View -->
+        <div class="menu-item" id="modeToggle" onclick="toggleViewMode()" style="display:none">
+          <div class="mode-indicator" id="modeDot"></div>
+          <span id="modeLabel">Personal View</span>
+        </div>
+        <div class="menu-item danger" id="logoutBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </div>
+      </div>
+
+      <div class="profile-trigger" onclick="toggleProfileMenu(event)">
         <div class="user-avatar" id="userAvatar">U</div>
-        <div class="user-details">
+        <div class="user-info">
           <div class="user-name" id="userName">—</div>
           <div class="user-role">Member</div>
         </div>
       </div>
-      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
     </div>
   </aside>
 
@@ -418,48 +447,51 @@
 
         <!-- ── Group Management (already in a group) ── -->
         <div id="groupDetailsSection" class="section-card" style="display:none">
-          <div class="group-header-info">
+          <div class="group-header-info" onclick="toggleGroupDetails()">
             <div class="group-icon-large">🏘️</div>
             <div class="group-titles">
               <div style="display:flex;align-items:center;">
                 <h3 id="currentGroupName">Your Family Group</h3>
-                <button id="btnEditGroupName" style="display:none;background:none;border:none;cursor:pointer;color:var(--accent);font-size:1.2rem;margin-left:0.5rem" title="Edit Group Name" onclick="editGroupName()">✏️</button>
+                <button id="btnEditGroupName" style="display:none;background:none;border:none;cursor:pointer;color:var(--accent);font-size:1.2rem;margin-left:0.5rem" title="Edit Group Name" onclick="event.stopPropagation(); editGroupName()">✏️</button>
               </div>
               <p>All members can log and view shared expenses</p>
             </div>
+            <div class="expand-icon" id="groupExpandIcon">▼</div>
           </div>
 
-          <!-- Owner-only invite box -->
-          <div id="inviteSection" class="invite-box" style="display:none">
-            <h4>Invite a Member</h4>
-            <p style="font-size:.83rem;color:var(--muted);margin-bottom:1rem">
-              Enter a user's <strong>Email Address</strong> or <strong>Firebase UID</strong> to invite them.
-            </p>
-            <div class="invite-input-group">
-              <input type="text" id="inviteEmail" placeholder="email@example.com or user-uid">
-              <button class="btn-primary" style="width:auto;padding:0 1.5rem;white-space:nowrap"
-                onclick="inviteMember(document.getElementById('inviteEmail').value)">
-                Send Invite
-              </button>
+          <div id="groupDetailsBody" class="group-details-body">
+            <!-- Owner-only invite box -->
+            <div id="inviteSection" class="invite-box" style="display:none">
+              <h4>Invite a Member</h4>
+              <p style="font-size:.83rem;color:var(--muted);margin-bottom:1rem">
+                Enter a user's <strong>Email Address</strong> or <strong>Firebase UID</strong> to invite them.
+              </p>
+              <div class="invite-input-group">
+                <input type="text" id="inviteEmail" placeholder="email@example.com or user-uid">
+                <button class="btn-primary" style="width:auto;padding:0 1.5rem;white-space:nowrap"
+                  onclick="inviteMember(document.getElementById('inviteEmail').value)">
+                  Send Invite
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div
-            style="display:flex;align-items:center;justify-content:space-between;margin-top:2.5rem;margin-bottom:1.25rem">
-            <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text)">Group Members</h2>
-            <div class="member-count-badge" id="memberCountText">0 Members</div>
-          </div>
+            <div
+              style="display:flex;align-items:center;justify-content:space-between;margin-top:2.5rem;margin-bottom:1.25rem">
+              <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text)">Group Members</h2>
+              <div class="member-count-badge" id="memberCountText">0 Members</div>
+            </div>
 
-          <div id="memberList" class="member-grid"></div>
+            <div id="memberList" class="member-grid"></div>
 
-          <div style="margin-top:2rem;text-align:center">
-            <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.5rem">
-              All members can add expenses from the
-              <a href="dashboard.html" style="color:var(--accent);text-decoration:none;font-weight:600">Dashboard</a>
-            </p>
-            <div style="display:flex;justify-content:center;gap:1rem;">
-              <button class="btn-secondary" id="btnLeaveGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="leaveGroup()">Leave Group</button>
-              <button class="btn-secondary" id="btnDeleteGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="deleteGroup()">Delete Group</button>
+            <div style="margin-top:2rem;text-align:center">
+              <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.5rem">
+                All members can add expenses from the
+                <a href="dashboard.html" style="color:var(--accent);text-decoration:none;font-weight:600">Dashboard</a>
+              </p>
+              <div style="display:flex;justify-content:center;gap:1rem;">
+                <button class="btn-secondary" id="btnLeaveGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="leaveGroup()">Leave Group</button>
+                <button class="btn-secondary" id="btnDeleteGroup" style="display:none;border-color:var(--danger);color:var(--danger)" onclick="deleteGroup()">Delete Group</button>
+              </div>
             </div>
           </div>
         </div>
@@ -485,25 +517,36 @@
         listenForNotifications(user.uid);
       }
 
-      // Always load incoming invites (queries by toUid — correct)
+      const viewMode = localStorage.getItem('viewMode') || 'personal';
+
+      // Always load incoming invites
       loadInvites();
 
-      // Show correct section
+      // Always show incoming invites
+      loadInvites();
+
+      // Show group creation card always, but toggle it if they have groups
+      document.getElementById('createGroupSection').style.display = 'block';
+      
       if (data.groupId) {
-        window.fbFS.collection('groups').doc(data.groupId).get().then(function (gDoc) {
-          if (gDoc.exists) {
-            document.getElementById('groupDetailsSection').style.display = 'block';
-            loadGroupMembers(data.groupId, user.uid);
-          } else {
-            // Group ID exists on user but group doc is missing (deleted?)
-            document.getElementById('createGroupSection').style.display = 'block';
-          }
-        }).catch(function () {
-          document.getElementById('createGroupSection').style.display = 'block';
-        });
-      } else {
-        document.getElementById('createGroupSection').style.display = 'block';
+          // If the user has a group, show the management card for current group
+          window.fbFS.collection('groups').doc(data.groupId).get().then(function (gDoc) {
+              if (gDoc.exists) {
+                  document.getElementById('groupDetailsSection').style.display = 'block';
+                  loadGroupMembers(data.groupId, user.uid);
+              }
+          });
       }
+
+      // ── Toggle Details ──
+      window.toggleGroupDetails = function() {
+        const body = document.getElementById('groupDetailsBody');
+        const icon = document.getElementById('groupExpandIcon');
+        if (body && icon) {
+           const isShown = body.classList.toggle('show');
+           icon.classList.toggle('expanded', isShown);
+        }
+      };
 
       // ── Event Listeners ──
       document.getElementById('btnCreateGroup').onclick = function () {

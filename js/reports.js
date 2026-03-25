@@ -36,10 +36,18 @@ document.getElementById('fromDate').addEventListener('change', renderPreview);
 document.getElementById('toDate').addEventListener('change', renderPreview);
 
 window.requireAuth(function(user, data) {
-  gUser = user; gData = data;
+  const viewMode = localStorage.getItem('viewMode') || 'personal';
+  gUser = user; 
+  // 🎯 Context-Aware Data
+  gData = (viewMode === 'group' && data.groupData) ? data.groupData : data;
+  
   var topUserNameEl = document.getElementById('topUserName');
   if (topUserNameEl) {
-    topUserNameEl.textContent = data.name || user.email.split('@')[0];
+    if (viewMode === 'group' && data.groupData) {
+      topUserNameEl.textContent = data.groupData.name || 'Group Account';
+    } else {
+      topUserNameEl.textContent = data.name || user.email.split('@')[0];
+    }
   }
 
   fbFS.collection('expenses').onSnapshot(function(snap) {
@@ -47,8 +55,11 @@ window.requireAuth(function(user, data) {
     snap.forEach(function(doc) {
       var exp = Object.assign({id:doc.id}, doc.data());
       var isMine = exp.createdBy === user.uid;
-      var inGroup = !!(data.groupId && exp.groupId && exp.groupId === data.groupId);
-      if (isMine || inGroup) {
+      var isGroupMsg = !!(data.groupId && exp.groupId && exp.groupId === data.groupId);
+
+      if (viewMode === 'personal' && isMine) {
+        gExpenses.push(exp);
+      } else if (viewMode === 'group' && isGroupMsg) {
         gExpenses.push(exp);
       }
     });

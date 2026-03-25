@@ -216,6 +216,21 @@ window.toggleChat = function() {
 
 let chatHistory = [];
 
+window.clearChat = function() {
+  chatHistory = [];
+  const body = document.getElementById('chatBody');
+  const mode = (typeof gViewMode !== 'undefined') ? gViewMode : 'personal';
+  if (body) {
+    body.innerHTML = `
+      <div class="msg bot">
+        Hello! I'm your FinBuddy. Chat history cleared for your <strong>${mode}</strong> profile. 
+        How can I help you with your ${mode} finances today?
+      </div>
+    `;
+  }
+  console.log('[AI] Chat history cleared.');
+};
+
 window.sendChat = async function() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
@@ -228,14 +243,17 @@ window.sendChat = async function() {
   
   const systemPrompt = {
     role: 'system',
-    content: `You are FinBuddy AI. 
-Current State: Total Spent ₹${totalSpent.toLocaleString()}, Budget ₹${budget.toLocaleString()}. 
-Categories: ${JSON.stringify(catTotals)}.
-Rules: 
-1. MANDATORY: Use Indian Rupees (₹) for ALL amounts. No dollars ($).
-2. HIGHLY ORGANIZED: Return items line by line using bullet points (•). 
-3. BE CONCISE: Use bold terms for key values. 
-4. Don't be too chatty; focus on precision.`
+    content: `You are FinBuddy, a friendly and professional financial assistant. 
+CONTEXT:
+- User's Total Spent: ₹${totalSpent.toLocaleString()}
+- User's Monthly Budget: ₹${budget.toLocaleString()}
+- Category Breakdown: ${JSON.stringify(catTotals)}
+
+INSTRUCTIONS:
+1. GREETINGS: If the user says "hi", "hello", or similar, respond with a warm greeting and ask how you can help with their finances today. Do NOT dump all the budget numbers immediately unless they ask or it's relevant.
+2. CURRENCY: Always use Indian Rupees (₹).
+3. STYLE: Be concise. Use bullet points (•) for lists. Use **bold** for monetary values.
+4. DATA USAGE: Use the CONTEXT data provided above to answer specific questions about spending, limits, or categories.`
   };
 
   // Keep history manageable

@@ -20,25 +20,12 @@ window.toggleViewMode = function () {
     return;
   }
 
-  window.gViewMode = (window.gViewMode === 'personal' ? 'group' : 'personal');
-  gViewMode = window.gViewMode;
-  localStorage.setItem('viewMode', window.gViewMode);
-  showToast('Showing ' + window.gViewMode + ' dashboard', 'info');
-
-  // Ensure we update global data and labels
-  if (typeof syncDashboardData === 'function') {
-    syncDashboardData();
-    loadExpenses(); // 🔄 Re-trigger real-time sync for the NEW mode (Personal vs Group)
-  } else {
-    updateModeUI();
-    renderStats();
-    loadExpenses();
-  }
-
-  // Relistens to expenses with the new filter
-  loadExpenses();
-  // Automatically switch back to Overview for a smoother transition
-  switchTab('overview');
+  const current = localStorage.getItem('viewMode') || 'personal';
+  const next = current === 'personal' ? 'group' : 'personal';
+  localStorage.setItem('viewMode', next);
+  
+  // Always redirect to dashboard on mode switch as requested
+  window.location.href = 'dashboard.html';
 };
 
 window.toggleProfileMenu = function (e, forceClose) {
@@ -72,31 +59,65 @@ function updateModeUI() {
     dot.className = 'mode-indicator ' + gViewMode;
   }
 
+  // 📑 Dynamic Tab Visibility: Only show "All Expenses" and "Group Chat" in Group mode
+  const allExpTab = document.querySelector('.tab-btn[data-tab="all-expenses"]');
+  if (allExpTab) {
+    allExpTab.style.display = gViewMode === 'group' ? 'inline-flex' : 'none';
+  }
+  const chatNav = document.getElementById('navChat');
+  if (chatNav) {
+    chatNav.style.display = (gViewMode === 'group' && gUserDoc.groupId) ? 'flex' : 'none';
+  }
+
   // 👤 Ensure Sidebar Updates to reflect current Context (Group vs Personal)
   if (gData && gUser) {
     const un = document.getElementById('userName');
     const av = document.getElementById('userAvatar');
-    const name = gData.name || gUser.email;
+    const ur = document.getElementById('userRole');
+    
+    // In Personal mode, use user's name. In Group mode, use group name.
+    const name = (gViewMode === 'personal') ? (gUserDoc.name || gUser.email) : (gGroupDoc.name || 'Group');
+    const role = (gViewMode === 'personal') ? 'Personal' : (gGroupDoc.role || 'Member');
+
     if (un) un.textContent = name;
     if (av) av.textContent = (name || 'U').charAt(0).toUpperCase();
+    if (ur) ur.textContent = role;
   }
 }
 
 // ─── Tab System ──────────────────────────────────────────────────────────────
 window.switchTab = function (tabId) {
+  // 1. Update inner-page tab buttons
   document.querySelectorAll('.tab-btn').forEach(function (b) {
     b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
   });
+
+  // 2. Update Sidebar navigation active states
+  const isDashboardTab = ['overview', 'my-expenses', 'all-expenses', 'profile'].includes(tabId);
+  document.querySelectorAll('.nav-item').forEach(function (n) {
+    const target = n.getAttribute('data-tab');
+    if (target === 'dashboard') n.classList.toggle('active', isDashboardTab);
+    else if (target === 'chat') n.classList.toggle('active', tabId === 'chat');
+  });
+
+  // 3. Toggle panes
   document.querySelectorAll('.tab-pane').forEach(function (p) {
     p.classList.remove('active');
   });
   var pane = document.getElementById('tab-' + tabId);
   if (pane) pane.classList.add('active');
 
+  // 🛡️ Chat-Specific Layout Clean-up
+  const statsGrid = document.querySelector('.stats-grid');
+  const mainTabNav = document.getElementById('mainTabNav');
+  if (statsGrid) statsGrid.style.display = (tabId === 'chat') ? 'none' : 'grid';
+  if (mainTabNav) mainTabNav.style.display = (tabId === 'chat') ? 'none' : 'flex';
+
   if (tabId === 'overview') renderOverview();
   if (tabId === 'all-expenses') renderAllExpenses();
   if (tabId === 'my-expenses') renderMyExpenses();
   if (tabId === 'profile') renderProfile();
+  if (tabId === 'chat' && typeof initGroupChat === 'function') initGroupChat();
 
   // 🧹 Ensure Sidebar Profile Menu closes whenever we switch tabs
   window.toggleProfileMenu(null, true);
@@ -115,8 +136,19 @@ window.toggleGroupSync = function (checkbox) {
 function renderProfile() {
   if (!gUser || !gData) return;
 
-  setTxt('profName', gUserDoc.name || 'User');
-  setTxt('profEmail', gUser.email);
+  const isGroup = gViewMode === 'group';
+  
+  // 🏷️ Dynamic Labels for Profile Tab
+  const headerTitle = document.querySelector('#tab-profile h2');
+  const headerSub   = document.querySelector('#tab-profile p');
+  const nameLabel   = document.querySelector('#tab-profile .prof-group:nth-child(1) label');
+  
+  if (headerTitle) headerTitle.textContent = isGroup ? 'Group Profile' : 'Your Profile';
+  if (headerSub)   headerSub.textContent   = isGroup ? 'Manage collective group details' : 'Manage your personal account details';
+  if (nameLabel)   nameLabel.textContent   = isGroup ? 'Group Name' : 'Display Name';
+
+  setTxt('profName', gData.name || (isGroup ? 'Unnamed Group' : 'User'));
+  setTxt('profEmail', isGroup ? 'Shared Group Account' : gUser.email);
   setTxt('profBudget', (gData.symbol || '₹') + fmt(gData.budget || 0));
 
   const syncToggle = document.getElementById('syncToGroupToggle');
@@ -125,11 +157,11 @@ function renderProfile() {
   }
 
   const av = document.getElementById('profAvatar');
-  if (av) av.textContent = (gUserDoc.name || gUser.email || 'U').charAt(0).toUpperCase();
+  if (av) av.textContent = (gData.name || 'U').charAt(0).toUpperCase();
 
   const modeBadge = document.getElementById('profMode');
   if (modeBadge) {
-    modeBadge.textContent = gViewMode.charAt(0).toUpperCase() + gViewMode.slice(1);
+    modeBadge.textContent = gViewMode.charAt(0).toUpperCase() + gViewMode.slice(1) + ' Mode';
     modeBadge.className = 'page-mode-badge ' + gViewMode;
   }
 
@@ -298,8 +330,8 @@ window.requireAuth(async function (user, data) {
   }
   gViewMode = window.gViewMode;
 
-  // Define Sync Function
-  const syncDashboardData = () => {
+  // Define Global Sync Function
+  window.syncDashboardData = () => {
     // 🛡️ DATA INTEGRITY CHECK: 
     // If we are in group mode, we MUST show group data or "Loading", NOT personal data.
     if (gViewMode === 'group') {
@@ -335,6 +367,8 @@ window.requireAuth(async function (user, data) {
       renderProfile();
     }
   };
+
+  const syncDashboardData = window.syncDashboardData;
 
   // 2. Attach Group Listener if required
   if (gUserDoc.groupId) {
@@ -386,8 +420,18 @@ window.requireAuth(async function (user, data) {
       });
     });
 
-    listenForInvitations(); // 🔔 Start notification sync on login
-    loadExpenses(); // Start syncing data records
+    listenForInvitations(); 
+    loadExpenses(); 
+
+    // 🎯 URL Param Check (Deep Linking)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'chat') {
+       if (gViewMode === 'group') {
+          switchTab('chat');
+       } else {
+          showToast('Switch to Group Mode for Chat', 'info');
+       }
+    }
   };
 
   // 🎯 Execution Flow
@@ -457,6 +501,12 @@ function loadExpenses() {
       // Always re-render stats and overview
       renderStats();
       renderOverview();
+      
+      // Auto-refresh AI insights if a mode switch just happened
+      if (window.gPendingInsightRefresh && typeof window.refreshInsights === 'function') {
+        window.refreshInsights();
+        window.gPendingInsightRefresh = false;
+      }
 
       // Re-render whichever tab is active
       var activeBtn = document.querySelector('.tab-btn.active');
@@ -477,15 +527,24 @@ function loadExpenses() {
 function renderStats() {
   var sym = gData.symbol || '₹';
   var budget = Number(gData.budget) || 0;
-  var total = gExpenses.reduce(function (s, e) { return s + Number(e.amount || 0); }, 0);
+
+  // 🗓️ Monthly Filtering: Align with budget cycle
+  var now = new Date();
+  var startOfMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+  var monthlyExpenses = gExpenses.filter(function (e) { return (e.date || '') >= startOfMonth; });
+
+  var total = monthlyExpenses.reduce(function (s, e) { return s + Number(e.amount || 0); }, 0);
   var left = budget - total;
 
   setTxt('sBudget', sym + fmt(budget));
   setTxt('sSpent', sym + fmt(total));
   setTxt('sRemaining', sym + fmt(Math.abs(left)));
-  setTxt('sCount', gExpenses.length);
+  setTxt('sCount', monthlyExpenses.length);
 
-  // 🚨 Exceed Label Logic
+  // 🚨 UI Highlighting
+  const spentValueEl = document.getElementById('sSpent');
+  if (spentValueEl) spentValueEl.style.color = (left < 0) ? 'var(--danger)' : '';
+
   const remValueEl = document.getElementById('sRemaining');
   if (remValueEl) {
     const remLabelEl = remValueEl.previousElementSibling;
@@ -538,18 +597,22 @@ function renderStats() {
 
 // ─── Render Overview Tab ──────────────────────────────────────────────────────
 function renderOverview() {
+  var now = new Date();
+  var startOfMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+  var monthlyExpenses = gExpenses.filter(function (e) { return (e.date || '') >= startOfMonth; });
+
   var catTotals = {};
-  gExpenses.forEach(function (e) {
+  monthlyExpenses.forEach(function (e) {
     var c = e.category || 'Other';
     catTotals[c] = (catTotals[c] || 0) + Number(e.amount || 0);
   });
 
   renderCatBreakdown(catTotals);
   updateDonutChart(catTotals);
-  renderList('overviewExpenseList', gExpenses.slice(0, 5)); // 📉 Limited to 5 for cleaner UI
+  renderList('overviewExpenseList', monthlyExpenses.slice(0, 5));
 
   var rc = document.getElementById('recentCount');
-  if (rc) rc.textContent = gExpenses.length + ' total';
+  if (rc) rc.textContent = monthlyExpenses.length + ' this month';
 }
 
 // ─── Render All Expenses Tab ──────────────────────────────────────────────────

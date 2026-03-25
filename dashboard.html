@@ -9,6 +9,7 @@
     href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/group-chat.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     .tab-pane { display: none; }
@@ -530,8 +531,9 @@
       padding: 1rem;
       border-bottom: 1px solid var(--border);
       display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
+      flex-direction: row; /* Horizontal layout for premium feel */
+      align-items: flex-start;
+      gap: 1rem;
       transition: 0.2s;
     }
 
@@ -539,10 +541,43 @@
       background: var(--card);
     }
 
+    .notif-icon-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .notif-icon-circle.blue   { background: rgba(91, 124, 250, 0.15); color: var(--accent); }
+    .notif-icon-circle.purple { background: rgba(124, 91, 245, 0.15); color: var(--accent2); }
+    .notif-icon-circle.green  { background: rgba(52, 211, 153, 0.15); color: var(--success); }
+
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 2px;
+      color: var(--text);
+    }
+
+    .notif-message {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
     .notif-item .notif-text {
       font-size: 0.82rem;
       color: var(--text);
-      line-height: 1.4;
+      line-height: 1.5;
     }
 
     .notif-item .notif-actions {
@@ -799,11 +834,12 @@
       <span class="brand-name">FinBuddy</span>
     </div>
     <nav class="sidebar-nav">
-      <a href="javascript:void(0)" class="nav-item active" data-tab="dashboard" onclick="switchTab('overview')">Dashboard</a>
-      <a href="javascript:void(0)" class="nav-item" data-tab="analytics" onclick="switchTab('analytics')">Analytics</a>
-      <a href="javascript:void(0)" class="nav-item" data-tab="reports" onclick="switchTab('reports')">Reports</a>
-      <a href="javascript:void(0)" class="nav-item" data-tab="groups" onclick="switchTab('groups')">Family Groups</a>
-      <a href="javascript:void(0)" class="nav-item" data-tab="settings" onclick="switchTab('settings')">Settings</a>
+      <a href="dashboard.html" class="nav-item active" data-tab="dashboard">Dashboard</a>
+      <a href="javascript:void(0)" class="nav-item" id="navChat" onclick="switchTab('chat')" data-tab="chat" style="display:none">Group Chat</a>
+      <a href="analytics.html" class="nav-item" data-tab="analytics">Analytics</a>
+      <a href="reports.html" class="nav-item" data-tab="reports">Reports</a>
+      <a href="groups.html" class="nav-item" data-tab="groups">Family Groups</a>
+      <a href="settings.html" class="nav-item" data-tab="settings">Settings</a>
     </nav>
     <div class="sidebar-footer">
       <div class="profile-menu" id="profileMenu">
@@ -910,7 +946,7 @@
         <div class="stat-card" id="cardSpent">
           <div class="sc-icon" style="background:rgba(248,113,113,.12);color:var(--danger)">💸</div>
           <div>
-            <div class="sc-label">Total Spent</div>
+            <div class="sc-label">Spent (This Month)</div>
             <div class="sc-value" id="sSpent">—</div>
           </div>
         </div>
@@ -1134,6 +1170,40 @@
         </div>
       </div>
 
+      <!-- ── Tab: Group Chat ── -->
+      <div id="tab-chat" class="tab-pane">
+        <div class="chat-container">
+          <div class="chat-header-v2">
+            <div class="ch-info">
+              <div class="ch-icon">💬</div>
+              <div class="ch-titles">
+                <h3 id="chatGroupName">Family Message Board</h3>
+                <p id="chatMemberCount">0 online</p>
+              </div>
+            </div>
+            <div class="ch-actions">
+               <button class="tool-btn" onclick="summarizeGroupChat()" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); color:var(--accent); font-weight:700;">✨ AI Recap</button>
+            </div>
+          </div>
+          <div class="chat-messages" id="groupMessages">
+            <div class="chat-welcome">
+              <p>Welcome to your family's real-time workspace!</p>
+            </div>
+          </div>
+          <div id="typingIndicator" style="font-size: 0.75rem; color: var(--muted); opacity: 0; padding: 0.5rem 1.5rem;">Someone is typing...</div>
+          <div class="chat-input-area" style="position: relative;">
+            <div class="emoji-picker" id="emojiPicker">
+              <span>😀</span><span>😂</span><span>🤣</span><span>😍</span><span>😒</span><span>😘</span><span>😭</span><span>🙄</span><span>🤩</span><span>🤔</span><span>🤗</span><span>😎</span><span>👋</span><span>👍</span><span>👎</span><span>👏</span><span>🙏</span><span>🔥</span><span>✨</span><span>💸</span><span>📈</span>
+            </div>
+            <button class="chat-attach-btn" onclick="toggleEmojiPicker()" title="Emoji">😀</button>
+            <button class="chat-attach-btn" onclick="document.getElementById('chatImageInput').click()" title="Attach image">📎</button>
+            <input type="file" id="chatImageInput" style="display:none" accept="image/*" onchange="sendChatImage(this.files[0])">
+            <input type="text" id="groupChatInput" placeholder="Message group..." onkeydown="if(event.key==='Enter') sendGroupMessage()">
+            <button onclick="sendGroupMessage()">➤</button>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /.page-body -->
   </main>
 
@@ -1273,8 +1343,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="js/common.js"></script>
   <script src="js/dashboard.js"></script>
+  <script src="js/group-chat.js"></script>
   <script src="js/ai-features.js"></script>
 </body>
 

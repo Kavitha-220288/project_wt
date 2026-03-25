@@ -22,15 +22,21 @@ document.getElementById('periodSelect').addEventListener('change', function(e) {
 });
 
 window.requireAuth(function(user, data) {
-  gUser = user; gData = data;
+  const viewMode = localStorage.getItem('viewMode') || 'personal';
+  gUser = user; 
+  // 🎯 Context-Aware Data (Use Group budget if in group mode)
+  gData = (viewMode === 'group' && data.groupData) ? data.groupData : data;
   
   fbFS.collection('expenses').onSnapshot(function(snap) {
     gExpenses = [];
     snap.forEach(function(doc) {
       var exp = Object.assign({id:doc.id}, doc.data());
       var isMine = exp.createdBy === user.uid;
-      var inGroup = !!(data.groupId && exp.groupId && exp.groupId === data.groupId);
-      if (isMine || inGroup) {
+      var isGroupMsg = !!(data.groupId && exp.groupId && exp.groupId === data.groupId);
+
+      if (viewMode === 'personal' && isMine) {
+        gExpenses.push(exp);
+      } else if (viewMode === 'group' && isGroupMsg) {
         gExpenses.push(exp);
       }
     });

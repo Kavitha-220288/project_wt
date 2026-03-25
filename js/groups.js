@@ -36,7 +36,8 @@ window.createGroup = function (name, budget) {
     return window.fbFS.collection('users').doc(user.uid).set({
       groupId: groupRef.id,
       groupName: name.trim(),
-      role: 'admin'
+      role: 'admin',
+      groupsList: firebase.firestore.FieldValue.arrayUnion({ id: groupRef.id, name: name.trim() })
     }, { merge: true });
   }).then(function () {
     if (window.showToast) window.showToast('Group created! 🎉', 'success');
@@ -152,11 +153,13 @@ window.acceptInvite = function (inviteId) {
     });
   }).then(function (groupId) {
     return window.fbFS.collection('groups').doc(groupId).get().then(function (groupDoc) {
-      var groupName = groupDoc.exists ? (groupDoc.data().name || 'Family Group') : 'Family Group';
+      if (!groupDoc.exists) throw new Error('Group not found');
+      var groupName = groupDoc.data().name || 'Family Group';
       return window.fbFS.collection('users').doc(user.uid).set({
         groupId: groupId,
         groupName: groupName,
-        role: 'member'
+        role: 'member',
+        groupsList: firebase.firestore.FieldValue.arrayUnion({ id: groupId, name: groupName })
       }, { merge: true });
     });
   }).then(function () {

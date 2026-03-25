@@ -14,16 +14,20 @@ window.onThemeToggle = function(checkbox) {
   window.toggleTheme();
 };
 
-window.requireAuth(function(user, data) {
-  gUser = user; gData = data;
+window.requireAuth(async function(user, data) {
+  const viewMode = localStorage.getItem('viewMode') || 'personal';
+  gUser = user; 
+  // 🎯 Context-Aware Data
+  gData = (viewMode === 'group' && data.groupData) ? data.groupData : data;
+  
   syncThemeToggle();
 
   // Populate fields
   document.getElementById('nameInput').value  = data.name || '';
   document.getElementById('emailInput').value = user.email || '';
-  document.getElementById('budgetInput').value = data.budget || '';
+  document.getElementById('budgetInput').value = gData.budget || '';
 
-  var curKey = (data.currency||'INR')+'|'+(data.symbol||'₹');
+  var curKey = (gData.currency||'INR')+'|'+(gData.symbol||'₹');
   var sel = document.getElementById('currencySelect');
   for (var i=0; i<sel.options.length; i++) {
     if (sel.options[i].value === curKey) { sel.selectedIndex = i; break; }
@@ -32,11 +36,16 @@ window.requireAuth(function(user, data) {
   // Account info
   var memberSince = data.createdAt ? (data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}) : '—';
   document.getElementById('memberSince').textContent  = memberSince;
-  document.getElementById('currentBudget').textContent = (data.symbol||'₹') + Number(data.budget||0).toLocaleString('en-IN');
+  document.getElementById('currentBudget').textContent = (gData.symbol||'₹') + Number(gData.budget||0).toLocaleString('en-IN');
+
+  const budgetTitle = document.querySelector('.settings-card h3');
+  if (budgetTitle && viewMode === 'group') {
+     budgetTitle.textContent = '📉 ' + (gData.name || 'Group') + ' Budget';
+  }
 
   // Load expenses for stats
   let query = fbFS.collection('expenses');
-  if (data.groupId) {
+  if (viewMode === 'group' && data.groupId) {
     query = query.where('groupId', '==', data.groupId);
   } else {
     query = query.where('createdBy', '==', user.uid);
@@ -46,11 +55,15 @@ window.requireAuth(function(user, data) {
     var total = 0;
     var count = 0;
     snap.forEach(function(doc){ 
-      total += Number(doc.data().amount || 0);
+      var exp = doc.data();
+      // If personal mode, EXCLUDE group expenses
+      if (viewMode === 'personal' && exp.groupId) return;
+      
+      total += Number(exp.amount || 0);
       count++;
     });
     document.getElementById('totalExpenses').textContent = count + ' transactions';
-    document.getElementById('totalSpent').textContent    = (data.symbol||'₹') + total.toLocaleString('en-IN');
+    document.getElementById('totalSpent').textContent    = (gData.symbol||'₹') + total.toLocaleString('en-IN');
   });
 });
 
@@ -68,6 +81,7 @@ window.saveName = function() {
 };
 
 window.saveBudget = function() {
+  const viewMode = localStorage.getItem('viewMode') || 'personal';
   var budget = Number(document.getElementById('budgetInput').value);
   if (!budget || budget <= 0) { showToast('Please enter a valid budget','error'); return; }
   var curVal = document.getElementById('currencySelect').value.split('|');
@@ -75,18 +89,32 @@ window.saveBudget = function() {
   
   const updateData = { budget: budget, currency: currency, symbol: symbol };
   
-  // If in a group, update group budget too
-  const p1 = fbFS.collection('users').doc(gUser.uid).update(updateData);
-  const p2 = gData.groupId ? fbFS.collection('groups').doc(gData.groupId).update({ budget: budget }) : Promise.resolve();
+  // Decide which account to update: Personal vs Group
+  let p;
+  if (viewMode === 'group' && gData.groupId) {
+    p = fbFS.collection('groups').doc(gData.groupId).update({ budget: budget });
+    showToast('Family Collective Budget updated ✓', 'success');
+  } else {
+    p = fbFS.collection('users').doc(gUser.uid).update(updateData);
+    showToast('Personal Budget updated ✓', 'success');
+  }
 
-  Promise.all([p1, p2]).then(function() {
-    gData.budget = budget; gData.currency = currency; gData.symbol = symbol;
-    document.getElementById('currentBudget').textContent = symbol + budget.toLocaleString('en-IN');
+  p.then(function() {
+    gData.budget = budget;
+    if (viewMode === 'personal') {
+      gData.currency = currency; 
+      gData.symbol = symbol;
+    }
+    document.getElementById('currentBudget').textContent = (gData.symbol || symbol) + budget.toLocaleString('en-IN');
     
     // 🔥 Sync with dashboard state immediately if we were on the same tab
-    if (window.gUserDoc) window.gUserDoc.budget = budget;
-    
-    showToast('Budget updated ✓', 'success');
+    if (window.gUserDoc) {
+      window.gUserDoc.budget = budget;
+      if (viewMode === 'personal') {
+         window.gUserDoc.currency = currency;
+         window.gUserDoc.symbol = symbol;
+      }
+    }
   }).catch(function(e){ showToast('Error: '+e.message,'error'); });
 };
 

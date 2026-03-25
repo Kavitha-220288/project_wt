@@ -4,6 +4,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const axios = require('axios');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 const admin = require('firebase-admin');
 
 // 🔐 Firebase Admin Init
@@ -63,16 +65,20 @@ app.post('/api/ai/parse', async (req, res) => {
   const orKey = process.env.OPENROUTER_KEY;
   const groqKey = process.env.GROQ_API_KEY;
 
-  const systemPrompt = `You are a professional financial assistant. Extract merchant details, amount, category, date, and a specific note into a JSON object.
+  const systemPrompt = `You are a professional financial assistant. Extract merchant details, amount, category, date, and a specific note into a JSON object matching this exact schema:
+  {
+    "title": "Merchant or Store Name",
+    "amount": 500.00,
+    "category": "Exactly one of: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Other",
+    "date": "YYYY-MM-DD",
+    "note": "Short descriptive note or empty string"
+  }
   RULES:
-  1. MERCHANT: The store, person, or company name.
-  2. AMOUNT: Numeric total only (e.g., 500).
-  3. CATEGORY: Exactly one of: Food, Travel, Shopping, Bills, Entertainment, Health, Education, Other.
-  4. DATE: Format YYYY-MM-DD.
-  5. NOTE: Only extract if it contains high-value context (e.g., "Gift for Mom", "Coffee with client"). 
-     ⚠️ IMPORTANT: Leave as an empty string "" if the text contains no useful extra context or just repeats information. 
-     🚫 DO NOT put generic text like "Bought coffee" or "Spent money" here.
-  6. OUTPUT: Return ONLY the raw JSON object. No explanations.`;
+  1. TITLE: The most accurate merchant, store, or company name found.
+  2. AMOUNT: Numeric total only (e.g., 1250.75). No symbols.
+  3. CATEGORY: Map the merchant to the best fit among the provided list.
+  4. DATE: Format as YYYY-MM-DD. If missing, use today's date.
+  5. OUTPUT: Return ONLY the raw JSON object. No explanations or extra characters.`;
 
   const messages = [{ role: 'system', content: systemPrompt }];
   if (fileBase64) {
@@ -87,18 +93,19 @@ app.post('/api/ai/parse', async (req, res) => {
     messages.push({ role: 'user', content: `Text: "${txt}"` });
   }
 
-  // 🔄 THE INDESTRUCTIBLE ENGINE (Optimized for both Vision and Text)
-  const models = [];
+  // 🚀 MODEL LIST (Nvidia Nemotron is now #1 as requested)
+  const models = [
+    { provider: 'OR', id: 'nvidia/nemotron-nano-12b-v2-vl:free' },
+    { provider: 'OR', id: 'google/gemini-2.0-flash-exp:free' },
+  ];
   
   if (!fileBase64) {
-    // Top-tier Text Reasoners (Priority for Voice)
-    models.push({ provider: 'OR', id: 'google/gemini-2.0-flash-exp:free' });
+    // Text-only Fallbacks (Used if #1 and #2 fail or are busy)
     models.push({ provider: 'OR', id: 'meta-llama/llama-3.3-70b-instruct:free' });
     models.push({ provider: 'OR', id: 'deepseek/deepseek-chat:free' });
   }
 
-  // Vision / Fallback Models
-  models.push({ provider: 'OR', id: 'nvidia/nemotron-nano-12b-v2-vl:free' });
+  // Vision / Multimodal Fallbacks (If image is present)
   models.push({ provider: 'OR', id: 'google/gemini-flash-1.5:free' });
   models.push({ provider: 'OR', id: 'meta-llama/llama-3.2-11b-vision-instruct:free' });
   models.push({ provider: 'OR', id: 'qwen/qwen-2-vl-7b-instruct:free' });
@@ -140,16 +147,24 @@ app.post('/api/ai/parse', async (req, res) => {
     }
   };
 
-  // Select 3-4 best candidates to race
-  const candidates = models.slice(0, 4); 
-
-  try {
-    const winner = await Promise.any(candidates.map(m => task(m)));
-    return res.json({ success: true, data: winner });
-  } catch (err) {
-    console.error('📊 All models failed parallel race:', err.message);
-    return res.status(500).json({ success: false, message: 'AI exhausted all options.' });
+  // 🚀 SEQUENTIAL ROBUST ENGINE (Fix for Rate Limits)
+  // We try models one by one to avoid triggering 429 (Too Many Requests) on free tiers.
+  for (const m of models) {
+    try {
+      const winner = await task(m);
+      return res.json({ success: true, data: winner });
+    } catch (e) {
+      console.warn(`[AI] Model ${m.id} failed:`, e.message);
+      // Continue to next model in list
+    }
   }
+
+  // If we reach here, all models in the list failed
+  console.error('📊 All AI models exhausted or failed.');
+  return res.status(500).json({ 
+    success: false, 
+    message: 'AI exhausted all options. High traffic on free tier — please try again in a moment.' 
+  });
 });
 
 // 💸 EXTERNAL PAYMENT SYNC (For cross-app Razorpay/Webhook sync)
@@ -163,9 +178,10 @@ app.post('/api/payments/external-sync', async (req, res) => {
   const amount = b.amount || p.amount || b.total || 0;
   const secret = b.secret || notes.secret || req.headers['x-sync-secret'] || '';
 
-  // Multi-source detection for Merchant and Item Name
+  // Multi-source detection for Merchant, Item Name and Category
   const merchant = b.merchant || notes.merchant || p.description || b.source || b.app || 'External App';
   const itemName = b.itemName || notes.itemName || notes.item || b.item || b.description || notes.description || 'External Purchase';
+  const category = b.category || notes.category || notes.type || b.cat || 'Other';
 
   // 1️⃣ Validate Secret
   const syncSecret = process.env.SYNC_SECRET_KEY || 'wt_secret_123';
@@ -206,22 +222,12 @@ app.post('/api/payments/external-sync', async (req, res) => {
       }
 
       // 2. ALL WRITES SECOND
-      // a. Update Personal Budget
-      const currentPB = parseFloat(uData.budget || 0);
-      t.update(userRef, { budget: currentPB - payAmount });
-
-      // b. Update Group Budget (Conditional)
-      if (gSnap && gSnap.exists) {
-        const currentGB = parseFloat(gSnap.data().budget || 0);
-        t.update(groupRef, { budget: currentGB - payAmount });
-      }
-
-      // c. Record Expense
+      // a. Record Expense (Budget subtraction is handled dynamically by UI based on expense records)
       const expRef = db.collection('expenses').doc();
       t.set(expRef, {
         title: itemName,
         amount: payAmount,
-        category: 'Other',
+        category: category,
         date: new Date().toISOString().split('T')[0],
         note: `Synced via ${merchant}${syncToGroup ? ' (Group Sync Enabled)' : ''}`,
         createdBy: userId,
@@ -229,19 +235,41 @@ app.post('/api/payments/external-sync', async (req, res) => {
         userEmail: uData.email || '',
         groupId: groupId,
         groupName: userData.groupName || null,
+        isSync: true, // Mark as synced from external source
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      // d. Notify User
-      const notifRef = db.collection('notifications').doc();
-      t.set(notifRef, {
+      // d. Notifications (Notify all group members if sync shared)
+      const notifMsg = `₹${payAmount.toFixed(2)} spent on ${itemName}.${syncToGroup ? ' [Family Budget Deducted]' : ''}`;
+      
+      // Notify the Buyer
+      const uNotifRef = db.collection('notifications').doc();
+      t.set(uNotifRef, {
         userId: userId,
-        title: merchant, // Use merchant as title
-        message: `₹${payAmount.toFixed(2)} spent on ${itemName}.${syncToGroup ? ' (Family Budget Deducted)' : ''}`,
+        title: merchant,
+        message: notifMsg,
         type: 'sync',
         read: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
+
+      // Notify Group Members (Conditional)
+      if (syncToGroup && gSnap && gSnap.exists) {
+        const members = gSnap.data().members || [];
+        members.forEach(member => {
+          if (member.userId !== userId) { // Avoid notifying the buyer twice
+            const gNotifRef = db.collection('notifications').doc();
+            t.set(gNotifRef, {
+              userId: member.userId,
+              title: `${merchant} (${userName})`,
+              message: notifMsg,
+              type: 'sync',
+              read: false,
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        });
+      }
     });
 
     console.log(`✅ Synced ₹${payAmount} for User ${userId}`);
@@ -304,9 +332,97 @@ app.post('/api/ai/generate-email', async (req, res) => {
   }
 });
 
+// 🚀 WRAP FOR SOCKET.IO
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
+// --- Realtime Group Chat Logic ---
+io.on('connection', (socket) => {
+  console.log('User connected to Group Chat:', socket.id);
+
+  // 🚪 Join Group Room
+  socket.on('join_group', (groupId) => {
+    if (!groupId) return;
+    socket.join(groupId);
+    socket.currentRoom = groupId; // Store for disconnect track
+    
+    // Broadcast updated member count
+    const room = io.sockets.adapter.rooms.get(groupId);
+    const count = room ? room.size : 0;
+    io.to(groupId).emit('update_member_count', count);
+    
+    console.log(`Socket ${socket.id} joined group: ${groupId} (Count: ${count})`);
+  });
+
+  // 💬 Messaging Engine (Supports Text, Images, and System Messages)
+  socket.on('send_message', async (payload) => {
+    const { groupId, text, image, type } = payload;
+    if (!groupId || (!text && !image)) return;
+    
+    // Enrich payload for broadcast
+    const msg = {
+      ...payload,
+      id: Date.now().toString() + '-' + Math.random().toString(36).substr(2, 5),
+      createdAt: payload.createdAt || new Date().toISOString()
+    };
+
+    // 1. Instant Real-time Broadcast
+    io.to(groupId).emit('receive_message', msg);
+
+    // 2. Persistent Storage & Notifications
+    try {
+      const gDoc = await db.collection('groups').doc(groupId).get();
+      if (gDoc.exists) {
+        const data = gDoc.data();
+        const members = data.members || [];
+        const senderId = payload.senderId;
+
+        // a. Save to history
+        await db.collection('groups').doc(groupId).collection('chat').add({
+          ...msg,
+          serverTimestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // b. Create notifications for other members
+        const batch = db.batch();
+        members.forEach(m => {
+          if (m.userId && m.userId !== senderId) {
+            const notifRef = db.collection('notifications').doc();
+            batch.set(notifRef, {
+              userId: m.userId,
+              title: `💬 ${payload.senderName}`,
+              message: (type === 'image' ? 'Sent a family photo' : (text.substring(0, 40) + (text.length > 40 ? '...' : ''))),
+              type: 'chat',
+              read: false,
+              groupId: groupId,
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        });
+        await batch.commit();
+      }
+    } catch (err) {
+      console.error('Chat notify error:', err.message);
+    }
+  });
+
+  // ⌨️ Typing Indicators
+  socket.on('typing_start', (groupId) => socket.to(groupId).emit('user_typing_start', socket.id));
+  socket.on('typing_stop', (groupId) => socket.to(groupId).emit('user_typing_stop', socket.id));
+
+  socket.on('disconnect', () => {
+    if (socket.currentRoom) {
+      const room = io.sockets.adapter.rooms.get(socket.currentRoom);
+      const count = room ? room.size : 0;
+      io.to(socket.currentRoom).emit('update_member_count', count);
+    }
+    console.log('Socket disconnected:', socket.id);
+  });
+});
+
 // Serve frontend if explicitly requested (optional for Dev)
 app.use(express.static(path.join(__dirname, '../')));
 
-app.listen(PORT, () => {
-  console.log(`🚀 AI Server running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 AI Server & Real-time Chat running on http://localhost:${PORT}`);
 });

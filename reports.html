@@ -14,20 +14,38 @@
 </div>
     <nav class="sidebar-nav">
       <a href="dashboard.html" class="nav-item">Dashboard</a>
+      <a href="dashboard.html?tab=chat" class="nav-item">Group Chat</a>
       <a href="analytics.html" class="nav-item">Analytics</a>
       <a href="reports.html"   class="nav-item active">Reports</a>
       <a href="groups.html"    class="nav-item">Family Groups</a>
       <a href="settings.html"  class="nav-item">Settings</a>
     </nav>
     <div class="sidebar-footer">
-      <div class="user-info">
+      <div class="profile-menu" id="profileMenu">
+        <div class="menu-item" onclick="window.location.href='dashboard.html#profile'; toggleProfileMenu()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>My Profile</span>
+        </div>
+        <!-- Switch View -->
+        <div class="menu-item" id="modeToggle" onclick="toggleViewMode()" style="display:none">
+          <div class="mode-indicator" id="modeDot"></div>
+          <span id="modeLabel">Personal View</span>
+        </div>
+        <div class="menu-item danger" id="logoutBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Logout</span>
+        </div>
+      </div>
+
+      <div class="profile-trigger" onclick="toggleProfileMenu(event)">
         <div class="user-avatar" id="userAvatar">U</div>
-        <div class="user-details">
+        <div class="user-info">
           <div class="user-name" id="userName">—</div>
           <div class="user-role">Member</div>
         </div>
       </div>
-      <button class="logout-btn" id="logoutBtn" title="Sign out">⏻</button>
     </div>
   </aside>
 
