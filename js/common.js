@@ -63,10 +63,17 @@
     if (!el) return;
 
     el.textContent = msg;
-    el.className = 'toast show' + (type ? ' ' + type : '');
+    el.classList.add('show');
+    if (type) el.classList.add(type);
 
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('show'), 3000);
+    el._t = setTimeout(() => {
+      el.classList.remove('show');
+      // Clean up specialty classes after fade out
+      setTimeout(() => {
+        if (type) el.classList.remove(type);
+      }, 400);
+    }, 4000); 
   };
 
   // 🔐 AUTH GUARD
@@ -209,25 +216,48 @@
   };
 
   // 🔔 INVITE NOTIFICATIONS (FIXED FIELD)
+  window.toggleNotifs = function() {
+    const el = document.getElementById('notifDropdown');
+    if (el) el.classList.toggle('show');
+  };
+
   window.listenForNotifications = function (uid) {
     if (!uid) return;
+    const body = document.getElementById('notifBody');
+    const badge = document.getElementById('notifBadge');
 
-    fbFS.collection('invites')
-      .where('toUid', '==', uid) // ✅ FIXED
+    window.fbFS.collection('invitations')
+      .where('inviteeEmail', '==', window.fbAuth.currentUser.email)
       .where('status', '==', 'pending')
-      .onSnapshot(snap => {
-
-        const badge = document.getElementById('notifBadge');
-        if (!badge) return;
-
+      .onSnapshot(function (snap) {
+        if (!body) return;
+        body.innerHTML = '';
         const count = snap.size;
-
-        if (count > 0) {
-          badge.innerText = count;
-          badge.style.display = 'flex';
-        } else {
-          badge.style.display = 'none';
+        
+        if (badge) {
+          badge.textContent = count;
+          badge.style.display = count > 0 ? 'flex' : 'none';
         }
+
+        if (count === 0) {
+          body.innerHTML = '<div class="notif-empty">No new notifications</div>';
+          return;
+        }
+
+        snap.forEach(function (doc) {
+          const inv = doc.data();
+          const id = doc.id;
+          const item = document.createElement('div');
+          item.className = 'notif-item';
+          item.innerHTML = `
+            <div class="notif-text"><strong>${inv.inviterName || 'Someone'}</strong> invited you to join the group <strong>${inv.groupName || 'Family'}</strong>.</div>
+            <div class="notif-actions">
+              <button class="notif-btn-accept" onclick="respondInvite('${id}', 'accepted', '${inv.groupId}')">Accept</button>
+              <button class="notif-btn-decline" onclick="respondInvite('${id}', 'declined')">Decline</button>
+            </div>
+          `;
+          body.appendChild(item);
+        });
       });
   };
 

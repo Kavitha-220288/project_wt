@@ -32,11 +32,8 @@ window.deleteExpense = function (id) {
     .catch(function (e) { showToast(e.message, 'error'); });
 };
 
-// ─── Toggle chat ─────────────────────────────────────────────────────────────
-window.toggleChat = function () {
-  var el = document.getElementById('chatbotWrap');
-  if (el) el.classList.toggle('open');
-};
+
+// (toggleChat moved to ai-features.js)
 
 // ─── Modal: open / close ─────────────────────────────────────────────────────
 window.openModal = function (editId) {
@@ -67,6 +64,11 @@ window.openModal = function (editId) {
     setTxt('modalTitle', 'Add Expense');
     setTxt('saveExpBtn', 'Save Expense');
   }
+  
+  // ALWAYS re-enable the button when opening
+  var btn = document.getElementById('saveExpBtn');
+  if (btn) btn.disabled = false;
+
   overlay.classList.add('open');
 };
 
@@ -207,6 +209,23 @@ window.requireAuth(async function (user, data) {
   renderStats();  // show budget immediately (expenses = 0 until snapshot fires)
   listenForInvitations();
   loadExpenses();
+
+  // ─── Click-outside to close ───
+  window.addEventListener('click', function(e) {
+    // Chatbot
+    const chat = document.getElementById('chatbotWrap');
+    const toggle = document.querySelector('.chat-toggle');
+    if (chat && chat.classList.contains('show') && !chat.contains(e.target) && !toggle.contains(e.target)) {
+      chat.classList.remove('show');
+    }
+
+    // Notifications
+    const notif = document.getElementById('notifDropdown');
+    const notifBtn = document.getElementById('notifBtn');
+    if (notif && notif.classList.contains('show') && !notif.contains(e.target) && !notifBtn.contains(e.target)) {
+      notif.classList.remove('show');
+    }
+  });
 });
 
 // ─── Load Expenses (real-time listener) ─────────────────────────────────────
@@ -286,6 +305,11 @@ function renderStats() {
 
   setTxt('pSpent', sym + fmt(total) + ' spent');
   setTxt('pLeft',  sym + fmt(Math.max(0, left)) + ' left');
+
+  // Check AI Alerts (90% threshold, reports, etc)
+  if (typeof window.checkEmailAlerts === 'function') {
+    window.checkEmailAlerts();
+  }
 }
 
 // ─── Render Overview Tab ──────────────────────────────────────────────────────
@@ -449,6 +473,34 @@ function listenForInvitations() {
     window.listenForNotifications(gUser.uid);
   }
 }
+
+// ─── Respond to Invite ───────────────────────────────────────────────────────
+window.respondInvite = function (invId, status, groupId) {
+  if (!gUser) return;
+  const invRef = window.fbFS.collection('invitations').doc(invId);
+
+  invRef.update({ status: status })
+    .then(async function () {
+      if (status === 'accepted' && groupId) {
+        // Update user profile to join group
+        await window.fbFS.collection('users').doc(gUser.uid).update({
+          groupId: groupId
+        });
+        showToast('You joined the group! 🎉', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('Invite ' + status, '');
+      }
+      
+      // Close dropdown
+      const d = document.getElementById('notifDropdown');
+      if (d) d.classList.remove('show');
+    })
+    .catch(function (e) {
+      console.error('Invite error:', e);
+      showToast('Error: ' + e.message, 'error');
+    });
+};
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 function setTxt(id, val) {
